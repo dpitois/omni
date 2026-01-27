@@ -281,7 +281,7 @@ export function useOutliner() {
        const newNodes = prev.map(n => {
         if (!n.text.includes(oldTag)) return n;
         const safeOldTag = oldTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`(${safeOldTag})(?![\\w\\u00C0-\\u00FF])`, 'g');
+        const regex = new RegExp(`(${safeOldTag})(?![\\w\\u00C0-\\u00FF-])`, 'g');
         if (regex.test(n.text)) {
             const updated = { ...n, text: n.text.replace(regex, newTag), updatedAt: Date.now() };
             nodesToSave.push(updated);

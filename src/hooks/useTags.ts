@@ -9,7 +9,7 @@ export interface TagInfo {
 export function useTags(nodes: Node[]) {
   const tags = useMemo(() => {
     const counts = new Map<string, number>();
-    const tagRegex = /#[\w\u00C0-\u00FF]+/g; // Support basic alphanumeric and accents
+    const tagRegex = /#[\w\u00C0-\u00FF-]+/g; // Support basic alphanumeric, accents and hyphens
 
     nodes.forEach(node => {
       const matches = node.text.match(tagRegex);

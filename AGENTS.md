@@ -22,6 +22,7 @@ MVO is a high-performance, keyboard-centric hierarchical outliner. It prioritize
 - **Library Navigation:** `Alt + L` to focus, `Arrows` to navigate, `E` to rename tags.
 - **Node Editing:** `Enter` (New), `Tab` (Indent), `Alt + ↕` (Move), `Alt + ↔` (Columns).
 - **Formatting:** `Ctrl+B` (Bold), `Ctrl+I` (Italic), `Ctrl+U` (Underline), `Ctrl+Shift+S` (Strike).
+- **Tags:** Supported format is `#[\w\u00C0-\u00FF-]+` (alphanumeric, accents, and hyphens).
 
 ### 2. Context-Driven Architecture
 - **Prop Drilling is forbidden.** Components should consume domain-specific contexts:

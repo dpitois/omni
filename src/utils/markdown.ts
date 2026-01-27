@@ -39,7 +39,7 @@ export function parseMarkdown(text: string, styles: Partial<TextSegment> = {}): 
 
   // Rules ordered by decreasing specificity
   const rules: MarkdownRule[] = [
-    { id: 'tag', symbol: '', regex: /#[\w\u00C0-\u00FF]+/ },
+    { id: 'tag', symbol: '', regex: /#[\w\u00C0-\u00FF-]+/ },
     { id: 'bolditalic', symbol: '***', regex: /\*\*\*(.*?)\*\*\*/ },
     { id: 'bold', symbol: '**', regex: /\*\*(.*?)\*\*/ },
     { id: 'underline', symbol: '__', regex: /__(.*?)__/ },

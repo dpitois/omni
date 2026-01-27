@@ -130,7 +130,7 @@ export function NodeItem({
     updateNode(node.id, { text: value });
     const cursor = textareaRef.current?.selectionStart || 0;
     const textBeforeCursor = value.substring(0, cursor);
-    const tagMatch = textBeforeCursor.match(/#(\w*)$/);
+    const tagMatch = textBeforeCursor.match(/#([\w\u00C0-\u00FF-]*)$/);
     if (tagMatch) {
       setSuggestionQuery(tagMatch[1]);
       setShowSuggestions(true);
@@ -145,7 +145,7 @@ export function NodeItem({
     const cursor = textareaRef.current?.selectionStart || 0;
     const textBeforeCursor = value.substring(0, cursor);
     const textAfterCursor = value.substring(cursor);
-    const newTextBefore = textBeforeCursor.replace(/#(\w*)$/, tag);
+    const newTextBefore = textBeforeCursor.replace(/#([\w\u00C0-\u00FF-]*)$/, tag);
     updateNode(node.id, { text: newTextBefore + textAfterCursor });
     setShowSuggestions(false);
     setTimeout(() => {
