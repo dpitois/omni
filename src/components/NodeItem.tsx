@@ -130,7 +130,14 @@ export function NodeItem({
     return parts.map((part, i) => {
       if (part.startsWith('#')) {
         const colors = getTagColor(part);
-        return <span key={i} className={`px-1 rounded mx-0.25 font-medium transition-colors cursor-default inline-block ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}`}>{part}</span>;
+        return (
+          <span 
+            key={i} 
+            className={`px-1 rounded -mx-1 font-medium transition-colors cursor-default inline ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}`}
+          >
+            {part}
+          </span>
+        );
       }
       return <span key={i} className={node.checked ? 'text-text-dim line-through decoration-text-dim/50' : 'text-text-main'}>{part}</span>;
     });

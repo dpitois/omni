@@ -29,13 +29,15 @@ export function Header() {
         <button onClick={() => setShowSidebar(!showSidebar)} className="p-1.5 rounded-md text-text-dim hover:bg-item-hover hover:text-text-main transition-colors mr-4">
           <SidebarIcon size={18} />
         </button>
-        <h1 className="text-sm font-medium text-text-dim flex items-center truncate">
+        <h1 className="text-sm font-medium text-text-dim flex items-center truncate gap-2">
             {activeTag ? (
               <>
-                <span className="text-text-dim/50 mr-2">Tag:</span> 
+                <span className="text-text-dim/50">Tag:</span> 
                 <TagBadge tag={activeTag} colorMode={colorMode} onClear={() => setActiveTag(null)} />
               </>
-            ) : "Untitled Outline"}
+            ) : (
+                <span className="font-bold tracking-tight text-text-main/80">Omni</span>
+            )}
         </h1>
       </div>
 
