@@ -35,12 +35,18 @@ export function useOutlinerUI() {
     );
   };
 
+  const setFocus = (id: string | null, colIdx: number = 0) => {
+    setFocusedNodeId(id);
+    setActiveColumnIndex(colIdx);
+  };
+
   return {
     focusedNodeId, setFocusedNodeId,
     activeColumnIndex, setActiveColumnIndex,
     showSidebar, setShowSidebar,
     showColumnMenu, setShowColumnMenu,
     colorMode, setColorMode,
-    visibleColumnIds, activeColumns, toggleColumnVisibility
+    visibleColumnIds, activeColumns, toggleColumnVisibility,
+    setFocus
   };
 }

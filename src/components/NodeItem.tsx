@@ -1,40 +1,33 @@
 import { useRef, useEffect, useState, useMemo } from 'preact/hooks';
-import type { Node, Column } from '../types';
+import type { Node } from '../types';
 import { Hash } from 'lucide-preact';
 import { getTagColor } from '../utils/colors';
 import { NodeGutter } from './NodeGutter';
 import { ProgressCell } from './columns/ProgressCell';
 import { DateCell, TextCell } from './columns/GenericCells';
+import { useOutlinerData, useOutlinerActions } from '../context/OutlinerContext';
+import { useUIState, useUIActions } from '../context/UIContext';
+import { useFilterState } from '../context/FilterContext';
 
 interface NodeItemProps {
   node: Node;
   hasChildren: boolean;
-  availableTags: string[];
-  columns: Column[];
-  colorMode: boolean;
   isDimmed: boolean;
   isIndeterminate?: boolean;
-  isFocused: boolean;
-  activeColumnIndex: number;
-  setFocus: (id: string | null, columnIndex?: number) => void;
-  onAdd: (afterId: string) => void;
-  onUpdate: (id: string, updates: Partial<Node>) => void;
-  onUpdateMetadata: (id: string, columnId: string, value: any) => void;
-  onToggleCheck: (id: string) => void;
-  onToggleCollapse: (id: string) => void;
-  onDelete: (id: string) => void;
-  onIndent: (id: string) => void;
-  onOutdent: (id: string) => void;
-  onMoveUp: (id: string) => void;
-  onMoveDown: (id: string) => void;
-  onFocusPrev: (id: string) => void;
-  onFocusNext: (id: string) => void;
 }
 
 export function NodeItem({ 
-  node, hasChildren, availableTags, columns, colorMode, isDimmed, isIndeterminate, isFocused, activeColumnIndex, setFocus,
-  onAdd, onUpdate, onUpdateMetadata, onToggleCheck, onToggleCollapse, onDelete, onIndent, onOutdent, onMoveUp, onMoveDown, onFocusPrev, onFocusNext 
+  node, hasChildren, isDimmed, isIndeterminate
 }: NodeItemProps) {
+  const { tags } = useOutlinerData();
+  const { addNode, updateNode, updateMetadata, toggleCheck, toggleCollapse, deleteNode, indentNode, outdentNode, moveNodeUp, moveNodeDown } = useOutlinerActions();
+  const { colorMode, activeColumns, focusedNodeId, activeColumnIndex } = useUIState();
+  const { setFocus, focusPrev, focusNext } = useUIActions();
+  const { visibleNodes, activeTag, searchQuery } = useFilterState();
+
+  const isFocused = focusedNodeId === node.id;
+  const availableTags = useMemo(() => tags.map(t => t.name), [tags]);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const columnRefs = useRef<(any)[]>([]);
   
@@ -63,7 +56,7 @@ export function NodeItem({
     if (e.altKey && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
         e.preventDefault();
         const newIdx = e.key === 'ArrowRight' ? activeColumnIndex + 1 : activeColumnIndex - 1;
-        if (newIdx >= 0 && newIdx < columns.length) setFocus(node.id, newIdx);
+        if (newIdx >= 0 && newIdx < activeColumns.length) setFocus(node.id, newIdx);
         return;
     }
 
@@ -75,29 +68,38 @@ export function NodeItem({
             if (e.key === 'Escape') { setShowSuggestions(false); return; }
         }
 
-        if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); onToggleCheck(node.id); }
-        else if (e.key === 'Enter') { e.preventDefault(); onAdd(node.id); }
-        else if (e.key === 'Tab') { e.preventDefault(); if (e.shiftKey) onOutdent(node.id); else onIndent(node.id); }
-        else if (e.key === 'Backspace' && node.text === '') { e.preventDefault(); onDelete(node.id); }
-        else if (e.key === 'ArrowUp' && !e.altKey && inputRef.current?.selectionStart === 0) { onFocusPrev(node.id); }
-        else if (e.key === 'ArrowDown' && !e.altKey && inputRef.current?.selectionStart === node.text.length) { onFocusNext(node.id); }
-        else if (e.key === 'ArrowUp' && e.altKey) { e.preventDefault(); onMoveUp(node.id); }
-        else if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); onMoveDown(node.id); }
-        else if (e.key === '.' && e.ctrlKey) { e.preventDefault(); onToggleCollapse(node.id); }
+        if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); toggleCheck(node.id); }
+        else if (e.key === 'Enter') { e.preventDefault(); handleAdd(); }
+        else if (e.key === 'Tab') { e.preventDefault(); if (e.shiftKey) outdentNode(node.id); else indentNode(node.id); }
+        else if (e.key === 'Backspace' && node.text === '') { e.preventDefault(); handleDelete(); }
+        else if (e.key === 'ArrowUp' && !e.altKey && inputRef.current?.selectionStart === 0) { focusPrev(visibleNodes, node.id); }
+        else if (e.key === 'ArrowDown' && !e.altKey && inputRef.current?.selectionStart === node.text.length) { focusNext(visibleNodes, node.id); }
+        else if (e.key === 'ArrowUp' && e.altKey) { e.preventDefault(); moveNodeUp(node.id); }
+        else if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); moveNodeDown(node.id); }
+        else if (e.key === '.' && e.ctrlKey) { e.preventDefault(); toggleCollapse(node.id); }
     } else {
         if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); setFocus(node.id, 0); }
     }
   };
 
+  const handleAdd = () => {
+    if (activeTag || searchQuery) return;
+    const newId = addNode(node.id);
+    setFocus(newId, 0);
+  };
+
+  const handleDelete = () => {
+    const index = visibleNodes.findIndex(n => n.id === node.id);
+    deleteNode(node.id);
+    if (index > 0) setFocus(visibleNodes[index - 1].id, 0);
+  };
+
   const handleInput = (e: any) => {
     const value = e.currentTarget.value;
-    onUpdate(node.id, { text: value });
-
-    // Tag suggestion logic
+    updateNode(node.id, { text: value });
     const cursor = inputRef.current?.selectionStart || 0;
     const textBeforeCursor = value.substring(0, cursor);
     const tagMatch = textBeforeCursor.match(/#(\w*)$/);
-
     if (tagMatch) {
       setSuggestionQuery(tagMatch[1]);
       setShowSuggestions(true);
@@ -112,11 +114,9 @@ export function NodeItem({
     const cursor = inputRef.current?.selectionStart || 0;
     const textBeforeCursor = value.substring(0, cursor);
     const textAfterCursor = value.substring(cursor);
-    
     const newTextBefore = textBeforeCursor.replace(/#(\w*)$/, tag);
-    onUpdate(node.id, { text: newTextBefore + textAfterCursor });
+    updateNode(node.id, { text: newTextBefore + textAfterCursor });
     setShowSuggestions(false);
-    
     setTimeout(() => {
         if (inputRef.current) {
             const newPos = newTextBefore.length;
@@ -138,11 +138,7 @@ export function NodeItem({
 
   const getCursorPosition = () => {
     if (!inputRef.current) return { x: 0 };
-    const cursor = inputRef.current.selectionStart || 0;
-    const textBefore = node.text.substring(0, cursor);
-    // Use the same font as the input for accurate measurement
-    const width = getTextWidth(textBefore, '16px ui-sans-serif, system-ui');
-    // Offset by 8px to account for input's px-2 padding
+    const width = getTextWidth(node.text.substring(0, inputRef.current.selectionStart || 0), '16px ui-sans-serif, system-ui');
     return { x: width + 8 };
   };
 
@@ -151,9 +147,8 @@ export function NodeItem({
   return (
     <div 
       className={`group grid items-center py-0.5 relative transition-opacity duration-300 ${isDimmed ? 'opacity-20' : 'opacity-100'}`}
-      style={{ gridTemplateColumns: columns.map(c => c.width).join(' ') }}
+      style={{ gridTemplateColumns: activeColumns.map(c => c.width).join(' ') }}
     >
-      {/* Column 0: Outline */}
       <div className="flex items-start min-w-0" style={{ paddingLeft: `${node.level * 28}px` }}>
         {node.level > 0 && <div className="absolute top-0 bottom-0 w-px bg-border-subtle transition-colors" style={{ left: `${(node.level * 28) - 16}px` }} />}
         
@@ -162,8 +157,8 @@ export function NodeItem({
           collapsed={!!node.collapsed} 
           checked={node.checked} 
           isIndeterminate={!!isIndeterminate}
-          onToggleCollapse={() => onToggleCollapse(node.id)}
-          onToggleCheck={() => onToggleCheck(node.id)}
+          onToggleCollapse={() => toggleCollapse(node.id)}
+          onToggleCheck={() => toggleCheck(node.id)}
         />
 
         <div className="flex-1 min-w-0 relative">
@@ -190,8 +185,7 @@ export function NodeItem({
         </div>
       </div>
 
-      {/* Dynamic Columns */}
-      {columns.slice(1).map((col, idx) => {
+      {activeColumns.slice(1).map((col, idx) => {
           const colIndex = idx + 1;
           const val = node.metadata?.[col.id] || (col.type === 'progress' ? 0 : '');
           
@@ -200,17 +194,17 @@ export function NodeItem({
                {col.type === 'progress' ? (
                   <ProgressCell 
                     value={val} isFocused={isFocused && activeColumnIndex === colIndex} 
-                    onUpdate={(v) => onUpdateMetadata(node.id, col.id, v)}
+                    onUpdate={(v) => updateMetadata(node.id, col.id, v)}
                     onKeyDown={handleKeyDown} onFocus={() => setFocus(node.id, colIndex)}
                   />
                ) : col.type === 'date' ? (
                   <DateCell 
-                    value={val} onUpdate={(v) => onUpdateMetadata(node.id, col.id, v)}
+                    value={val} onUpdate={(v) => updateMetadata(node.id, col.id, v)}
                     onKeyDown={handleKeyDown} onFocus={() => setFocus(node.id, colIndex)}
                   />
                ) : (
                   <TextCell 
-                    value={val} onUpdate={(v) => onUpdateMetadata(node.id, col.id, v)}
+                    value={val} onUpdate={(v) => updateMetadata(node.id, col.id, v)}
                     onKeyDown={handleKeyDown} onFocus={() => setFocus(node.id, colIndex)}
                   />
                )}

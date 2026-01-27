@@ -1,32 +1,17 @@
 import { useRef, useEffect } from 'preact/hooks';
 import { Sidebar as SidebarIcon, X, Palette, Sun, Moon, Search, Columns, Check } from 'lucide-preact';
 import { getTagColor } from '../utils/colors';
-import type { Column } from '../types';
+import { useUIState, useUIActions, ALL_COLUMNS } from '../context/UIContext';
+import { useFilterState, useFilterActions } from '../context/FilterContext';
 
-interface HeaderProps {
-  activeTag: string | null;
-  searchQuery: string;
-  darkMode: boolean;
-  colorMode: boolean;
-  showColumnMenu: boolean;
-  allColumns: Column[];
-  visibleColumnIds: string[];
-  onToggleSidebar: () => void;
-  onToggleColorMode: () => void;
-  onToggleDarkMode: () => void;
-  onToggleColumnMenu: () => void;
-  onSearchChange: (query: string) => void;
-  onClearTag: () => void;
-  onToggleColumn: (id: string) => void;
-}
-
-export function Header({
-  activeTag, searchQuery, darkMode, colorMode, showColumnMenu, allColumns, visibleColumnIds,
-  onToggleSidebar, onToggleColorMode, onToggleDarkMode, onToggleColumnMenu, onSearchChange, onClearTag, onToggleColumn
-}: HeaderProps) {
+export function Header() {
+  const { activeTag, searchQuery } = useFilterState();
+  const { setSearchQuery, setActiveTag } = useFilterActions();
+  const { darkMode, colorMode, showColumnMenu, visibleColumnIds, showSidebar } = useUIState();
+  const { setShowSidebar, setColorMode, setDarkMode, setShowColumnMenu, toggleColumnVisibility } = useUIActions();
+  
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Focus Shortcut (Ctrl+F)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
@@ -41,36 +26,36 @@ export function Header({
   return (
     <header className="h-14 flex items-center justify-between px-6 border-b border-border-subtle bg-app-bg/80 backdrop-blur-md z-30 sticky top-0 flex-shrink-0">
       <div className="flex items-center flex-1">
-        <button onClick={onToggleSidebar} className="p-1.5 rounded-md text-text-dim hover:bg-item-hover hover:text-text-main transition-colors mr-4">
+        <button onClick={() => setShowSidebar(!showSidebar)} className="p-1.5 rounded-md text-text-dim hover:bg-item-hover hover:text-text-main transition-colors mr-4">
           <SidebarIcon size={18} />
         </button>
         <h1 className="text-sm font-medium text-text-dim flex items-center truncate">
             {activeTag ? (
               <>
                 <span className="text-text-dim/50 mr-2">Tag:</span> 
-                <TagBadge tag={activeTag} colorMode={colorMode} onClear={onClearTag} />
+                <TagBadge tag={activeTag} colorMode={colorMode} onClear={() => setActiveTag(null)} />
               </>
             ) : "Untitled Outline"}
         </h1>
       </div>
 
       <div className="flex items-center gap-4">
-        <SearchBar value={searchQuery} onChange={onSearchChange} inputRef={searchInputRef} />
+        <SearchBar value={searchQuery} onChange={setSearchQuery} inputRef={searchInputRef} />
 
         <div className="flex items-center gap-1 border-l border-border-subtle pl-4">
-          <IconButton onClick={onToggleColorMode} active={colorMode} title="Toggle Colors"><Palette size={14} /></IconButton>
-          <IconButton onClick={onToggleDarkMode} title="Toggle Theme">{darkMode ? <Sun size={14} /> : <Moon size={14} />}</IconButton>
+          <IconButton onClick={() => setColorMode(!colorMode)} active={colorMode} title="Toggle Colors"><Palette size={14} /></IconButton>
+          <IconButton onClick={() => setDarkMode(!darkMode)} title="Toggle Theme">{darkMode ? <Sun size={14} /> : <Moon size={14} />}</IconButton>
           
           <div className="relative ml-2">
-            <button onClick={onToggleColumnMenu} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors border ${showColumnMenu ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' : 'text-text-dim border-border-subtle hover:bg-item-hover hover:text-text-main'}`}>
+            <button onClick={() => setShowColumnMenu(!showColumnMenu)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors border ${showColumnMenu ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' : 'text-text-dim border-border-subtle hover:bg-item-hover hover:text-text-main'}`}>
               <Columns size={14} />
               <span>Columns</span>
             </button>
             {showColumnMenu && (
               <ColumnDropdown 
-                columns={allColumns} 
+                columns={ALL_COLUMNS} 
                 visibleIds={visibleColumnIds} 
-                onToggle={onToggleColumn} 
+                onToggle={toggleColumnVisibility} 
               />
             )}
           </div>
@@ -80,7 +65,6 @@ export function Header({
   );
 }
 
-// Sub-components for cleaner JSX
 function TagBadge({ tag, colorMode, onClear }: { tag: string, colorMode: boolean, onClear: () => void }) {
   const colors = getTagColor(tag);
   return (
