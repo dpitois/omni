@@ -8,6 +8,7 @@ import { DateCell, TextCell } from './columns/GenericCells';
 import { useOutlinerData, useOutlinerActions } from '../context/OutlinerContext';
 import { useUIState, useUIActions } from '../context/UIContext';
 import { useFilterState } from '../context/FilterContext';
+import { parseMarkdown, applyFormat } from '../utils/markdown';
 
 interface NodeItemProps {
   node: Node;
@@ -28,12 +29,19 @@ export function NodeItem({
   const isFocused = focusedNodeId === node.id;
   const availableTags = useMemo(() => tags.map(t => t.name), [tags]);
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const columnRefs = useRef<(any)[]>([]);
   
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [suggestionQuery, setSuggestionQuery] = useState('');
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = inputRef.current.scrollHeight + 'px';
+    }
+  }, [node.text, isFocused]);
 
   useEffect(() => {
     if (isFocused) {
@@ -52,6 +60,21 @@ export function NodeItem({
       .slice(0, 5);
   }, [availableTags, suggestionQuery]);
 
+  const handleFormat = (symbol: string) => {
+    if (!inputRef.current) return;
+    const start = inputRef.current.selectionStart || 0;
+    const end = inputRef.current.selectionEnd || 0;
+    const { text, newStart, newEnd } = applyFormat(node.text, start, end, symbol);
+    updateNode(node.id, { text });
+    
+    setTimeout(() => {
+        if (inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.setSelectionRange(newStart, newEnd);
+        }
+    }, 0);
+  };
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.altKey && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
         e.preventDefault();
@@ -66,6 +89,13 @@ export function NodeItem({
             if (e.key === 'ArrowUp') { e.preventDefault(); setSuggestionIndex(prev => (prev - 1 + filteredTags.length) % filteredTags.length); return; }
             if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); applySuggestion(filteredTags[suggestionIndex]); return; }
             if (e.key === 'Escape') { setShowSuggestions(false); return; }
+        }
+
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key.toLowerCase() === 'b') { e.preventDefault(); handleFormat('**'); return; }
+            if (e.key.toLowerCase() === 'i') { e.preventDefault(); handleFormat('*'); return; }
+            if (e.key.toLowerCase() === 'u') { e.preventDefault(); handleFormat('__'); return; }
+            if (e.key.toLowerCase() === 's' && e.shiftKey) { e.preventDefault(); handleFormat('~~'); return; }
         }
 
         if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); toggleCheck(node.id); }
@@ -125,21 +155,44 @@ export function NodeItem({
     }, 0);
   };
 
-  const renderTextWithTags = () => {
-    const parts = node.text.split(/(#[\w\u00C0-\u00FF]+)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith('#')) {
-        const colors = getTagColor(part);
+  const renderRichText = () => {
+    const segments = parseMarkdown(node.text);
+    return segments.map((seg, i) => {
+      if (seg.isTag) {
+        const colors = getTagColor(seg.text);
         return (
-          <span 
-            key={i} 
-            className={`px-1 rounded -mx-1 font-medium transition-colors cursor-default inline ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}`}
-          >
-            {part}
+          <span key={i} className={`px-1 rounded -mx-1 font-medium transition-colors cursor-default inline ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}`}>
+            {seg.text}
           </span>
         );
       }
-      return <span key={i} className={node.checked ? 'text-text-dim line-through decoration-text-dim/50' : 'text-text-main'}>{part}</span>;
+      
+      if (seg.isMarker) {
+          if (!isFocused) return null;
+          // Marqueurs plus visibles en édition
+          return <span key={i} className="text-blue-500/40 font-mono font-bold">{seg.text}</span>;
+      }
+
+      // Calcul manuel des décorations de texte pour permettre le cumul (Underline + Line-through)
+      const decorations = [];
+      if (!isFocused && seg.underline) decorations.push('underline');
+      if (node.checked || (!isFocused && seg.strikethrough)) decorations.push('line-through');
+
+      const styles = [
+          (!isFocused && seg.bold) ? 'font-bold' : '',
+          (!isFocused && seg.italic) ? 'italic' : '',
+          node.checked ? 'text-text-dim decoration-text-dim/50' : 'text-text-main'
+      ].join(' ');
+
+      return (
+        <span 
+            key={i} 
+            className={styles} 
+            style={{ textDecorationLine: decorations.join(' '), textDecorationThickness: '2px', textUnderlineOffset: '2px' }}
+        >
+            {seg.text}
+        </span>
+      );
     });
   };
 
@@ -149,7 +202,7 @@ export function NodeItem({
     return { x: width + 8 };
   };
 
-  const styles = LEVEL_STYLES[node.level] || LEVEL_STYLES[0];
+  const levelStyles = LEVEL_STYLES[node.level] || LEVEL_STYLES[0];
 
   return (
     <div 
@@ -169,14 +222,16 @@ export function NodeItem({
         />
 
         <div className="flex-1 min-w-0 relative">
-            <div className={`absolute inset-0 pointer-events-none px-2 py-1 select-none whitespace-pre-wrap break-words border border-transparent leading-relaxed z-10 ${styles.fontSize} ${styles.fontWeight}`}>{renderTextWithTags()}</div>
-            <input
+            <div className={`absolute inset-0 pointer-events-none px-2 py-1 select-none whitespace-pre-wrap break-words border border-transparent leading-relaxed z-10 ${levelStyles.fontSize} ${levelStyles.fontWeight}`}>{renderRichText()}</div>
+            <textarea
                 ref={inputRef}
                 value={node.text}
                 onInput={handleInput}
                 onKeyDown={handleKeyDown}
                 onFocus={() => setFocus(node.id, 0)}
-                className={`w-full bg-transparent border border-transparent outline-none px-2 py-1 leading-relaxed caret-blue-500 text-transparent relative z-0 ${styles.fontSize} ${styles.fontWeight} placeholder:text-text-dim/30`}
+                rows={1}
+                spellcheck={false}
+                className={`w-full bg-transparent border border-transparent outline-none px-2 py-1 leading-relaxed caret-blue-500 text-transparent relative z-0 resize-none overflow-hidden ${levelStyles.fontSize} ${levelStyles.fontWeight} placeholder:text-text-dim/30`}
             />
 
             {showSuggestions && filteredTags.length > 0 && (
