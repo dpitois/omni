@@ -6,75 +6,94 @@ export function useOutliner() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Helper to ensure parentIds are correct based on hierarchy
+  // Helper to ensure parentIds and Ranks are correct
   const sanitizeNodes = useCallback((rawNodes: Node[]) => {
     const lastAtLevel = new Map<number, string>();
     
-    return rawNodes.map(node => {
+    return rawNodes.map((node, index) => {
       lastAtLevel.set(node.level, node.id);
       
-      // My parent is the last one seen at level - 1
       const calculatedParentId = node.level === 0 ? null : (lastAtLevel.get(node.level - 1) || null);
       
-      if (node.parentId !== calculatedParentId) {
-        return { ...node, parentId: calculatedParentId };
-      }
-      return node;
+      // Update Rank (spaced by 1000 to allow future insertions if needed)
+      // and ParentId
+      return { 
+        ...node, 
+        parentId: calculatedParentId,
+        rank: index * 1000 
+      };
     });
   }, []);
 
+  // Initial Load
   useEffect(() => {
     storage.load().then(loadedNodes => {
-      setNodes(loadedNodes);
+      // We sanitize on load to ensure valid state
+      const cleanNodes = sanitizeNodes(loadedNodes);
+      setNodes(cleanNodes);
       setIsLoading(false);
     });
   }, []);
 
-  useEffect(() => {
-    if (!isLoading) {
-      const cleanNodes = sanitizeNodes(nodes);
-      storage.save(cleanNodes);
-    }
-  }, [nodes, isLoading, sanitizeNodes]);
+  // -- ATOMIC ACTIONS --
 
   const updateNode = useCallback((id: string, updates: Partial<Node>) => {
-    setNodes(prev => prev.map(n => n.id === id ? { ...n, ...updates, updatedAt: Date.now() } : n));
+    setNodes(prev => {
+      const newNodes = prev.map(n => {
+        if (n.id === id) {
+          const updatedNode = { ...n, ...updates, updatedAt: Date.now() };
+          // Atomic Save: Only save this node
+          storage.saveNode(updatedNode); 
+          return updatedNode;
+        }
+        return n;
+      });
+      return newNodes;
+    });
   }, []);
-
-  const getDescendantIndices = (nodes: Node[], parentIndex: number) => {
-    const indices: number[] = [];
-    const parentLevel = nodes[parentIndex].level;
-    for (let i = parentIndex + 1; i < nodes.length; i++) {
-      if (nodes[i].level <= parentLevel) break;
-      indices.push(i);
-    }
-    return indices;
-  };
-
-  const getParentIndex = (nodes: Node[], childIndex: number) => {
-    const childLevel = nodes[childIndex].level;
-    if (childLevel === 0) return -1;
-    for (let i = childIndex - 1; i >= 0; i--) {
-      if (nodes[i].level < childLevel) return i;
-    }
-    return -1;
-  };
 
   const toggleCheck = useCallback((id: string) => {
     setNodes(prev => {
       const index = prev.findIndex(n => n.id === id);
       if (index === -1) return prev;
 
-      const node = prev[index];
-      const newCheckedState = !node.checked;
       let newNodes = [...prev];
+      const node = newNodes[index];
+      const newCheckedState = !node.checked;
 
+      // Track modified nodes for batch save
+      const nodesToSave: Node[] = [];
+
+      // 1. Update target
       newNodes[index] = { ...node, checked: newCheckedState, updatedAt: Date.now() };
+      nodesToSave.push(newNodes[index]);
 
-      const descendantIndices = getDescendantIndices(prev, index);
-      descendantIndices.forEach(idx => {
-        newNodes[idx] = { ...newNodes[idx], checked: newCheckedState, updatedAt: Date.now() };
-      });
+      // 2. Descendants
+      const parentLevel = node.level;
+      for (let i = index + 1; i < newNodes.length; i++) {
+        if (newNodes[i].level <= parentLevel) break;
+        newNodes[i] = { ...newNodes[i], checked: newCheckedState, updatedAt: Date.now() };
+        nodesToSave.push(newNodes[i]);
+      }
+
+      // 3. Ancestors bubble up check
+      // (Simplified logic re-used from before, but now we collect changes)
+      // To properly batch save parents, we need to re-evaluate them.
+      // Since bubble-up logic is complex to extract for atomic saves without full context,
+      // and toggleCheck usually affects a small subgraph, let's keep it simple:
+      // We will perform the full calculation in memory, then save *only the modified ones*.
+      
+      // ... actually, the bubble up logic requires scanning siblings. 
+      // Let's re-run the bubble logic: 
+      
+      const getParentIndex = (list: Node[], childIdx: number) => {
+        const childLvl = list[childIdx].level;
+        if (childLvl === 0) return -1;
+        for (let k = childIdx - 1; k >= 0; k--) {
+          if (list[k].level < childLvl) return k;
+        }
+        return -1;
+      };
 
       let currentIndex = index;
       while (true) {
@@ -82,64 +101,117 @@ export function useOutliner() {
         if (parentIndex === -1) break;
 
         const parent = newNodes[parentIndex];
-        const siblingsIndices = getDescendantIndices(newNodes, parentIndex).filter(idx => 
-          newNodes[idx].level === parent.level + 1
-        );
+        // Find siblings of currentIndex's node (children of parent)
+        let allSiblingsChecked = true;
+        for (let k = parentIndex + 1; k < newNodes.length; k++) {
+            if (newNodes[k].level <= parent.level) break; // End of parent's block
+            if (newNodes[k].level === parent.level + 1) {
+                if (!newNodes[k].checked) {
+                    allSiblingsChecked = false;
+                    break;
+                }
+            }
+        }
 
-        const allSiblingsChecked = siblingsIndices.every(idx => newNodes[idx].checked);
-        
         if (newNodes[parentIndex].checked !== allSiblingsChecked) {
              newNodes[parentIndex] = { ...parent, checked: allSiblingsChecked, updatedAt: Date.now() };
+             nodesToSave.push(newNodes[parentIndex]);
              currentIndex = parentIndex;
         } else {
-            break; 
+            break;
         }
       }
+
+      // Atomic Batch Save
+      storage.saveNodes(nodesToSave);
 
       return newNodes;
     });
   }, []);
 
   const toggleCollapse = useCallback((id: string) => {
-    setNodes(prev => prev.map(n => n.id === id ? { ...n, collapsed: !n.collapsed, updatedAt: Date.now() } : n));
-  }, []);
-
-  const addNode = useCallback((afterId: string | null) => {
-    const newNode: Node = {
-      id: self.crypto.randomUUID(), // Native browser UUID
-      text: '',
-      level: 0,
-      checked: false,
-      collapsed: false,
-      parentId: null,
-      updatedAt: Date.now()
-    };
-
     setNodes(prev => {
-      const index = prev.findIndex(n => n.id === afterId);
-      if (index === -1) return [...prev, newNode];
-
-      const prevNode = prev[index];
-      newNode.level = prevNode.level;
-      
-      const newNodes = [...prev];
-      newNodes.splice(index + 1, 0, newNode);
+      const newNodes = prev.map(n => {
+        if (n.id === id) {
+          const updated = { ...n, collapsed: !n.collapsed, updatedAt: Date.now() };
+          storage.saveNode(updated); // Atomic
+          return updated;
+        }
+        return n;
+      });
       return newNodes;
     });
-    return newNode.id;
   }, []);
+
+  // -- STRUCTURAL ACTIONS (Batch Saves) --
+  // For these, we modify the array, RE-RANK everything (simple approach), and save.
+  // Ideally we only save changed ranks, but re-saving the list is safe in IDB transaction.
+
+  const persistStructure = (nodes: Node[]) => {
+    // Sanitize ensures parentIds and Ranks are correct
+    const cleanNodes = sanitizeNodes(nodes);
+    storage.saveNodes(cleanNodes);
+    return cleanNodes;
+  };
+
+
+
+  // Refactored addNode to return ID
+  const addNodeWithReturn = useCallback((afterId: string | null) => {
+    const newNode: Node = {
+        id: self.crypto.randomUUID(),
+        text: '',
+        level: 0,
+        rank: 0,
+        checked: false,
+        collapsed: false,
+        parentId: null,
+        updatedAt: Date.now()
+    };
+    
+    setNodes(prev => {
+        const index = prev.findIndex(n => n.id === afterId);
+        const newNodes = [...prev];
+        if (index === -1) {
+            newNodes.push(newNode);
+        } else {
+            const prevNode = prev[index];
+            newNode.level = prevNode.level;
+            newNodes.splice(index + 1, 0, newNode);
+        }
+        return persistStructure(newNodes);
+    });
+    return newNode.id;
+  }, [sanitizeNodes]);
+
 
   const deleteNode = useCallback((id: string) => {
     setNodes(prev => {
         const index = prev.findIndex(n => n.id === id);
         if (index === -1) return prev;
         
-        const descendantIndices = getDescendantIndices(prev, index);
-        const indicesToRemove = new Set([index, ...descendantIndices]);
+        // Find descendants
+        const indicesToRemove = new Set<number>();
+        indicesToRemove.add(index);
+        const parentLevel = prev[index].level;
+        for(let i = index + 1; i < prev.length; i++) {
+            if(prev[i].level <= parentLevel) break;
+            indicesToRemove.add(i);
+        }
+
+        // Collect IDs to delete from DB
+        const idsToDelete = Array.from(indicesToRemove).map(i => prev[i].id);
         
-        return prev.filter((_, i) => !indicesToRemove.has(i));
+        const newNodes = prev.filter((_, i) => !indicesToRemove.has(i));
+        
+        // DB Actions
+        storage.deleteNodes(idsToDelete);
+        // We might need to re-rank/sanitize remaining nodes if we want gaps closed, 
+        // but it's not strictly necessary for correctness. 
+        // Let's persist structure to be safe (re-rank).
+        return persistStructure(newNodes);
     });
-  }, []);
+  }, [sanitizeNodes]);
 
   const indentNode = useCallback((id: string) => {
     setNodes(prev => {
@@ -149,20 +221,20 @@ export function useOutliner() {
       const node = prev[index];
       const prevNode = prev[index - 1];
 
-      if (node.level > prevNode.level) return prev;
-      if (node.level >= 5) return prev;
-      
-      const descendantIndices = getDescendantIndices(prev, index);
+      if (node.level > prevNode.level || node.level >= 5) return prev;
       
       const newNodes = [...prev];
       newNodes[index] = { ...node, level: node.level + 1 };
-      descendantIndices.forEach(idx => {
-          newNodes[idx] = { ...newNodes[idx], level: newNodes[idx].level + 1 };
-      });
+      
+      // Indent descendants
+      for(let i = index + 1; i < newNodes.length; i++) {
+          if(newNodes[i].level <= node.level) break; 
+          newNodes[i] = { ...newNodes[i], level: newNodes[i].level + 1 };
+      }
 
-      return newNodes;
+      return persistStructure(newNodes);
     });
-  }, []);
+  }, [sanitizeNodes]);
 
   const outdentNode = useCallback((id: string) => {
     setNodes(prev => {
@@ -171,16 +243,16 @@ export function useOutliner() {
       const node = prev[index];
       if (node.level === 0) return prev;
 
-      const descendantIndices = getDescendantIndices(prev, index);
-      
       const newNodes = [...prev];
       newNodes[index] = { ...node, level: node.level - 1 };
-      descendantIndices.forEach(idx => {
-          newNodes[idx] = { ...newNodes[idx], level: newNodes[idx].level - 1 };
-      });
-      return newNodes;
+      
+      for(let i = index + 1; i < newNodes.length; i++) {
+          if(newNodes[i].level <= node.level) break;
+          newNodes[i] = { ...newNodes[i], level: newNodes[i].level - 1 };
+      }
+      return persistStructure(newNodes);
     });
-  }, []);
+  }, [sanitizeNodes]);
 
   const moveNodeUp = useCallback((id: string) => {
     setNodes(prev => {
@@ -188,7 +260,6 @@ export function useOutliner() {
       if (index <= 0) return prev;
 
       const myLevel = prev[index].level;
-
       let prevSiblingIndex = -1;
       for (let i = index - 1; i >= 0; i--) {
         if (prev[i].level < myLevel) break;
@@ -200,22 +271,19 @@ export function useOutliner() {
 
       if (prevSiblingIndex === -1) return prev;
 
-      const myBlockIndices = getDescendantIndices(prev, index);
-      const myBlockSize = 1 + myBlockIndices.length;
-
-      const newNodes = [...prev];
-      // Extract My Block
-      const myBlock = newNodes.splice(index, myBlockSize);
+      // Calculate blocks
+      let myBlockEnd = index + 1;
+      while(myBlockEnd < prev.length && prev[myBlockEnd].level > myLevel) myBlockEnd++;
       
-      // Update timestamp to force re-render and keep focus
-      myBlock[0] = { ...myBlock[0], updatedAt: Date.now() };
+      const newNodes = [...prev];
+      const myBlock = newNodes.splice(index, myBlockEnd - index);
+      myBlock[0] = { ...myBlock[0], updatedAt: Date.now() }; // Update timestamp for focus
 
-      // Insert My Block BEFORE Previous Sibling
       newNodes.splice(prevSiblingIndex, 0, ...myBlock);
 
-      return newNodes;
+      return persistStructure(newNodes);
     });
-  }, []);
+  }, [sanitizeNodes]);
 
   const moveNodeDown = useCallback((id: string) => {
     setNodes(prev => {
@@ -223,45 +291,54 @@ export function useOutliner() {
       if (index === -1) return prev;
 
       const myLevel = prev[index].level;
-      const myBlockIndices = getDescendantIndices(prev, index);
-      const myBlockSize = 1 + myBlockIndices.length;
+      
+      let myBlockEnd = index + 1;
+      while(myBlockEnd < prev.length && prev[myBlockEnd].level > myLevel) myBlockEnd++;
+      const myBlockSize = myBlockEnd - index;
 
       const nextSiblingIndex = index + myBlockSize;
-      
-      if (nextSiblingIndex >= prev.length) return prev;
-      if (prev[nextSiblingIndex].level < myLevel) return prev;
-      
-      const nextBlockIndices = getDescendantIndices(prev, nextSiblingIndex);
-      const nextBlockSize = 1 + nextBlockIndices.length;
+      if (nextSiblingIndex >= prev.length || prev[nextSiblingIndex].level < myLevel) return prev;
 
+      let nextBlockEnd = nextSiblingIndex + 1;
+      while(nextBlockEnd < prev.length && prev[nextBlockEnd].level > myLevel) nextBlockEnd++;
+      
       const newNodes = [...prev];
       const myBlock = newNodes.splice(index, myBlockSize);
+      myBlock[0] = { ...myBlock[0], updatedAt: Date.now() }; // Update timestamp for focus
+
+      // After removing myBlock, nextSibling is shifted to `index`
+      // nextBlock ends at `index + (nextBlockEnd - nextSiblingIndex)`
+      const newInsertPos = index + (nextBlockEnd - nextSiblingIndex);
       
-      // Update timestamp to force re-render and keep focus
-      myBlock[0] = { ...myBlock[0], updatedAt: Date.now() };
+      newNodes.splice(newInsertPos, 0, ...myBlock);
 
-      newNodes.splice(index + nextBlockSize, 0, ...myBlock);
-
-      return newNodes;
+      return persistStructure(newNodes);
     });
-  }, []);
+  }, [sanitizeNodes]);
 
   const renameTag = useCallback((oldTag: string, newTag: string) => {
-    setNodes(prev => prev.map(n => {
-      if (!n.text.includes(oldTag)) return n;
-      const safeOldTag = oldTag.replace(/[.*+?^${}()|[\\]/g, '\\$&');
-      const regex = new RegExp(`(${safeOldTag})(?![\\w\\u00C0-\u00FF])`, 'g');
-      if (regex.test(n.text)) {
-        return { ...n, text: n.text.replace(regex, newTag), updatedAt: Date.now() };
-      }
-      return n;
-    }));
+    setNodes(prev => {
+       const nodesToSave: Node[] = [];
+       const newNodes = prev.map(n => {
+        if (!n.text.includes(oldTag)) return n;
+        const safeOldTag = oldTag.replace(/[.*+?^${}()|[\\]/g, '\\$&');
+        const regex = new RegExp(`(${safeOldTag})(?![\\w\\u00C0-\\u00FF])`, 'g');
+        if (regex.test(n.text)) {
+            const updated = { ...n, text: n.text.replace(regex, newTag), updatedAt: Date.now() };
+            nodesToSave.push(updated);
+            return updated;
+        }
+        return n;
+      });
+      storage.saveNodes(nodesToSave); // Batch save modified nodes only
+      return newNodes;
+    });
   }, []);
 
   return {
     nodes,
     isLoading,
-    addNode,
+    addNode: addNodeWithReturn,
     updateNode,
     toggleCheck,
     toggleCollapse,
