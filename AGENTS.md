@@ -36,10 +36,10 @@ MVO is a high-performance, keyboard-centric hierarchical outliner. It prioritize
 - [x] Tag System (Extraction, Filtering, Renaming, Counts)
 - [x] IndexedDB Persistence
 - [x] Theming system (Light/Dark variants via CSS variables)
+- [x] Global Search across all notes.
 - [ ] Multi-select / Bulk actions
 - [ ] Export to Markdown/JSON
 - [ ] **Custom Columns (Limited):** Add support for extra fields per node (e.g., progress slider, custom text field).
-- [ ] Global Search across all notes.
 
 ## Instructions for Future Agents
 - **Refactoring:** Always check `useOutliner.ts` before modifying tree logic. It uses a flat-list representation of a tree.

@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'preact/hooks';
 import { useOutliner } from '../hooks/useOutliner';
 import { useTags } from '../hooks/useTags';
 import { NodeItem } from './NodeItem';
-import { Hash, Sidebar as SidebarIcon, X, Palette, Sun, Moon } from 'lucide-preact';
+import { Hash, Sidebar as SidebarIcon, X, Palette, Sun, Moon, Search } from 'lucide-preact';
 import { getTagColor } from '../utils/colors';
 
 export function OutlinerWrapper() {
@@ -11,12 +11,15 @@ export function OutlinerWrapper() {
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(true);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [colorMode, setColorMode] = useState(true);
   
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   // Theme Management
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('mvo_theme');
-    return saved ? saved === 'dark' : true; // Default to dark
+    return saved ? saved === 'dark' : true; 
   });
 
   useEffect(() => {
@@ -29,6 +32,18 @@ export function OutlinerWrapper() {
       localStorage.setItem('mvo_theme', 'light');
     }
   }, [darkMode]);
+
+  // Global Keyboard Shortcuts (Search)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   const tagNames = useMemo(() => tags.map(t => t.name), [tags]);
 
@@ -65,18 +80,24 @@ export function OutlinerWrapper() {
     }
   };
 
-  // Visibility Logic
+  // Visibility Logic (Search + Tags)
   const visibleNodesInfo = useMemo(() => {
-    // 1. Tag Filtering
-    if (activeTag) {
+    const hasFilter = activeTag || searchQuery.trim() !== '';
+
+    if (hasFilter) {
+      const query = searchQuery.toLowerCase();
       const matchingIndices = new Set<number>();
+      
       nodes.forEach((n, idx) => {
-        if (n.text.includes(activeTag)) matchingIndices.add(idx);
+        const matchesTag = activeTag ? n.text.includes(activeTag) : true;
+        const matchesSearch = query ? n.text.toLowerCase().includes(query) : true;
+        if (matchesTag && matchesSearch) matchingIndices.add(idx);
       });
 
       const indicesToShow = new Set<number>();
       matchingIndices.forEach(index => {
         indicesToShow.add(index);
+        // Show parents for context
         let currentLevel = nodes[index].level;
         for (let i = index - 1; i >= 0; i--) {
           const candidate = nodes[i];
@@ -89,16 +110,23 @@ export function OutlinerWrapper() {
       });
 
       return nodes
-        .map((n, idx) => ({ node: n, originalIndex: idx, hasChildren: false })) 
+        .map((n, idx) => ({ 
+            node: n, 
+            originalIndex: idx, 
+            hasChildren: false // Simplify in filter mode
+        })) 
         .filter(item => indicesToShow.has(item.originalIndex))
-        .map(item => ({
-          node: item.node,
-          isDimmed: !item.node.text.includes(activeTag),
-          hasChildren: false
-        }));
+        .map(item => {
+            const isMatch = matchingIndices.has(item.originalIndex);
+            return {
+                node: item.node,
+                isDimmed: !isMatch,
+                hasChildren: false
+            };
+        });
     }
 
-    // 2. Standard View (with Collapsing)
+    // Standard View (with Collapsing)
     const result = [];
     let hideUntilLevel: number | null = null;
 
@@ -130,7 +158,7 @@ export function OutlinerWrapper() {
     }
     return result;
 
-  }, [nodes, activeTag]);
+  }, [nodes, activeTag, searchQuery]);
 
   const visibleNodes = visibleNodesInfo.map(info => info.node);
 
@@ -156,7 +184,7 @@ export function OutlinerWrapper() {
   }, [nodes]);
 
   const handleAdd = (afterId: string) => {
-    if (activeTag) return;
+    if (activeTag || searchQuery) return;
     const newId = addNode(afterId);
     setFocusedNodeId(newId);
   };
@@ -205,9 +233,9 @@ export function OutlinerWrapper() {
           
           <div className="space-y-0.5 flex-1 overflow-y-auto">
             <button 
-                onClick={() => setActiveTag(null)}
+                onClick={() => { setActiveTag(null); setSearchQuery(''); }}
                 className={`w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm transition-colors mb-2
-                  ${!activeTag ? 'bg-blue-500/10 text-blue-500' : 'text-text-dim hover:text-text-main hover:bg-item-hover'}
+                  ${(!activeTag && !searchQuery) ? 'bg-blue-500/10 text-blue-500' : 'text-text-dim hover:text-text-main hover:bg-item-hover'}
                 `}
             >
               <SidebarIcon size={14} className="mr-2" />
@@ -276,29 +304,54 @@ export function OutlinerWrapper() {
       <div className="flex-1 flex flex-col h-full bg-app-bg min-w-0">
         
         {/* Header */}
-        <header className="h-14 flex items-center px-6 border-b border-border-subtle bg-app-bg/80 backdrop-blur-md z-10 sticky top-0 flex-shrink-0">
-          <button 
-            onClick={() => setShowSidebar(!showSidebar)}
-            className="p-1.5 rounded-md text-text-dim hover:bg-item-hover hover:text-text-main transition-colors mr-4"
-          >
-            <SidebarIcon size={18} />
-          </button>
-          <h1 className="text-sm font-medium text-text-dim flex items-center">
-            {activeTag ? (
-              <>
-                <span className="text-text-dim/50 mr-2">Tag:</span> 
-                {(() => {
-                  const colors = getTagColor(activeTag);
-                  return (
-                    <span className={`px-2 py-0.5 rounded text-xs ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}`}>
-                      {activeTag}
-                    </span>
-                  );
-                })()}
-                <button onClick={() => setActiveTag(null)} className="ml-2 hover:bg-item-hover p-1 rounded-full"><X size={12}/></button>
-              </>
-            ) : "Untitled Outline"}
-          </h1>
+        <header className="h-14 flex items-center justify-between px-6 border-b border-border-subtle bg-app-bg/80 backdrop-blur-md z-10 sticky top-0 flex-shrink-0">
+          <div className="flex items-center flex-1">
+            <button 
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="p-1.5 rounded-md text-text-dim hover:bg-item-hover hover:text-text-main transition-colors mr-4"
+            >
+                <SidebarIcon size={18} />
+            </button>
+            <h1 className="text-sm font-medium text-text-dim flex items-center truncate">
+                {activeTag ? (
+                <>
+                    <span className="text-text-dim/50 mr-2">Tag:</span> 
+                    {(() => {
+                    const colors = getTagColor(activeTag);
+                    return (
+                        <span className={`px-2 py-0.5 rounded text-xs ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}`}>
+                        {activeTag}
+                        </span>
+                    );
+                    })()}
+                    <button onClick={() => setActiveTag(null)} className="ml-2 hover:bg-item-hover p-1 rounded-full"><X size={12}/></button>
+                </>
+                ) : "Untitled Outline"}
+            </h1>
+          </div>
+
+          {/* Global Search Bar */}
+          <div className="flex-1 max-w-md ml-4 relative">
+             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim/50">
+                <Search size={14} />
+             </div>
+             <input 
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onInput={(e) => setSearchQuery(e.currentTarget.value)}
+                placeholder="Global Search... (Ctrl+F)"
+                className="w-full bg-sidebar-bg/50 border border-border-subtle rounded-full py-1.5 pl-9 pr-4 text-sm text-text-main focus:outline-none focus:border-blue-500/50 focus:bg-sidebar-bg transition-all placeholder:text-text-dim/30"
+             />
+             {searchQuery && (
+                <button 
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim hover:text-text-main"
+                >
+                    <X size={14} />
+                </button>
+             )}
+          </div>
         </header>
 
         {/* Editor Area */}
@@ -350,7 +403,7 @@ export function OutlinerWrapper() {
                
                {visibleNodes.length === 0 && (
                  <div className="text-center py-20 text-text-dim/50">
-                   {activeTag ? 'No notes found with this tag' : <>Press <span className="font-mono bg-item-hover px-1 rounded">Enter</span> to start writing</>}
+                   {searchQuery || activeTag ? 'No notes found' : <>Press <span className="font-mono bg-item-hover px-1 rounded">Enter</span> to start writing</>}
                  </div>
                )}
              </div>
