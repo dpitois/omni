@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'preact/hooks';
-import { Hash, Sidebar as SidebarIcon } from 'lucide-preact';
+import { Hash, Sidebar as SidebarIcon, X } from 'lucide-preact';
 import { getTagColor } from '../utils/colors';
 import { useUIState, useUIActions } from '../context/UIContext';
 import { useOutlinerData, useOutlinerActions } from '../context/OutlinerContext';
@@ -7,7 +7,7 @@ import { useFilterState, useFilterActions } from '../context/FilterContext';
 
 export function Sidebar() {
   const { showSidebar, colorMode, editingTag, editValue } = useUIState();
-  const { setEditingTag, setEditValue } = useUIActions();
+  const { setEditingTag, setEditValue, setShowSidebar } = useUIActions();
   const { tags } = useOutlinerData();
   const { renameTag } = useOutlinerActions();
   const { activeTag, searchQuery } = useFilterState();
@@ -36,56 +36,78 @@ export function Sidebar() {
   };
 
   return (
-    <div className={`${showSidebar ? 'w-64 opacity-100' : 'w-0 opacity-0 overflow-hidden'} transition-all duration-300 ease-in-out bg-sidebar-bg border-r border-border-subtle flex flex-col flex-shrink-0`}>
-      <div className="p-4 pt-6 flex flex-col h-full">
-        <h2 className="text-xs font-semibold text-text-dim uppercase tracking-widest mb-4 px-2">Library</h2>
-        
-        <div className="space-y-0.5 flex-1 overflow-y-auto">
-          <button 
-            onClick={() => setActiveTag(null)} 
-            className={`w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm transition-colors mb-2 ${(!activeTag && !searchQuery) ? 'bg-blue-500/10 text-blue-500' : 'text-text-dim hover:text-text-main hover:bg-item-hover'}`}
-          >
-            <SidebarIcon size={14} className="mr-2" />
-            All Notes
-          </button>
+    <>
+      {/* Mobile Backdrop */}
+      {showSidebar && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
 
-          {tags.length === 0 ? (
-            <div className="px-2 py-2 text-sm text-text-dim italic">No tags yet</div>
-          ) : (
-            tags.map(({ name, count }) => {
-              const colors = getTagColor(name);
-              const isActive = activeTag === name;
-              return (
-                <div key={name}>
-                  {editingTag === name ? (
-                    <input
-                      ref={editInputRef}
-                      type="text"
-                      value={editValue}
-                      onInput={(e) => setEditValue(e.currentTarget.value)}
-                      onBlur={handleRename}
-                      onKeyDown={handleEditKeyDown}
-                      className="w-full bg-app-bg border border-blue-500/50 rounded-md px-2 py-1 text-sm text-text-main outline-none"
-                    />
-                  ) : (
-                    <button 
-                      onClick={() => setActiveTag(name)} 
-                      onDblClick={() => { setEditingTag(name); setEditValue(name); }} 
-                      className={`w-full text-left flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-all group ${isActive ? (colorMode ? `${colors.bg} ${colors.text}` : 'bg-blue-500/10 text-blue-500') : 'text-text-dim hover:bg-item-hover hover:text-text-main'}`}
-                    >
-                      <div className="flex items-center truncate">
-                        <Hash size={14} className={`mr-2 flex-shrink-0 ${isActive ? (colorMode ? colors.text : 'text-blue-500') : (colorMode ? `${colors.text} opacity-70 group-hover:opacity-100` : 'text-text-dim group-hover:text-blue-500')}`} />
-                        <span className="truncate">{name.replace('#', '')}</span>
-                      </div>
-                      <span className={`text-[10px] ml-2 px-1.5 py-0.5 rounded-full flex-shrink-0 ${isActive ? (colorMode ? 'bg-black/10' : 'bg-blue-500/20 text-blue-600 dark:text-blue-300') : 'bg-black/5 dark:bg-white/5 text-text-dim group-hover:text-text-main'}`}>{count}</span>
-                    </button>
-                  )}
-                </div>
-              );
-            })
-          )}
+      {/* Sidebar Panel */}
+      <div 
+        className={`
+          fixed inset-y-0 left-0 z-50 w-64 bg-sidebar-bg border-r border-border-subtle flex flex-col transition-transform duration-300 ease-in-out
+          lg:relative lg:translate-x-0
+          ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+        <div className="p-4 pt-6 flex flex-col h-full">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <h2 className="text-xs font-semibold text-text-dim uppercase tracking-widest">Library</h2>
+            <button onClick={() => setShowSidebar(false)} className="lg:hidden p-1 hover:bg-item-hover rounded-md text-text-dim">
+              <X size={16} />
+            </button>
+          </div>
+          
+          <div className="space-y-0.5 flex-1 overflow-y-auto">
+            <button 
+              onClick={() => { setActiveTag(null); setShowSidebar(false); }} 
+              className={`w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm transition-colors mb-2 ${(!activeTag && !searchQuery) ? 'bg-blue-500/10 text-blue-500' : 'text-text-dim hover:text-text-main hover:bg-item-hover'}`}
+            >
+              <SidebarIcon size={14} className="mr-2" />
+              All Notes
+            </button>
+
+            {tags.length === 0 ? (
+              <div className="px-2 py-2 text-sm text-text-dim italic">No tags yet</div>
+            ) : (
+              tags.map(({ name, count }) => {
+                const colors = getTagColor(name);
+                const isActive = activeTag === name;
+                return (
+                  <div key={name}>
+                    {editingTag === name ? (
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editValue}
+                        onInput={(e) => setEditValue(e.currentTarget.value)}
+                        onBlur={handleRename}
+                        onKeyDown={handleEditKeyDown}
+                        className="w-full bg-app-bg border border-blue-500/50 rounded-md px-2 py-1 text-sm text-text-main outline-none"
+                      />
+                    ) : (
+                      <button 
+                        onClick={() => { setActiveTag(name); setShowSidebar(false); }} 
+                        onDblClick={() => { setEditingTag(name); setEditValue(name); }} 
+                        className={`w-full text-left flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-all group ${isActive ? (colorMode ? `${colors.bg} ${colors.text}` : 'bg-blue-500/10 text-blue-500') : 'text-text-dim hover:bg-item-hover hover:text-text-main'}`}
+                      >
+                        <div className="flex items-center truncate">
+                          <Hash size={14} className={`mr-2 flex-shrink-0 ${isActive ? (colorMode ? colors.text : 'text-blue-500') : (colorMode ? `${colors.text} opacity-70 group-hover:opacity-100` : 'text-text-dim group-hover:text-blue-500')}`} />
+                          <span className="truncate">{name.replace('#', '')}</span>
+                        </div>
+                        <span className={`text-[10px] ml-2 px-1.5 py-0.5 rounded-full flex-shrink-0 ${isActive ? (colorMode ? 'bg-black/10' : 'bg-blue-500/20 text-blue-600 dark:text-blue-300') : 'bg-black/5 dark:bg-white/5 text-text-dim group-hover:text-text-main'}`}>{count}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -1,5 +1,12 @@
-import { render } from 'preact'
-import './index.css'
-import { App } from './app.tsx'
+import { render } from 'preact';
+import { OutlinerWrapper } from './components/OutlinerWrapper';
+import './index.css';
 
-render(<App />, document.getElementById('app')!)
+// PWA Service Worker Registration
+import { registerSW } from 'virtual:pwa-register';
+
+if (typeof window !== 'undefined') {
+  registerSW({ immediate: true });
+}
+
+render(<OutlinerWrapper />, document.getElementById('app')!);

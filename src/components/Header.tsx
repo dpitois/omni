@@ -1,14 +1,16 @@
 import { useRef, useEffect } from 'preact/hooks';
-import { Sidebar as SidebarIcon, X, Palette, Sun, Moon, Search, Columns, Check } from 'lucide-preact';
+import { Sidebar as SidebarIcon, X, Palette, Sun, Moon, Search, Columns, Check, CloudOff } from 'lucide-preact';
 import { getTagColor } from '../utils/colors';
 import { useUIState, useUIActions, ALL_COLUMNS } from '../context/UIContext';
 import { useFilterState, useFilterActions } from '../context/FilterContext';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 export function Header() {
   const { activeTag, searchQuery } = useFilterState();
   const { setSearchQuery, setActiveTag } = useFilterActions();
   const { darkMode, colorMode, showColumnMenu, visibleColumnIds, showSidebar } = useUIState();
   const { setShowSidebar, setColorMode, setDarkMode, setShowColumnMenu, toggleColumnVisibility } = useUIActions();
+  const isOnline = useOnlineStatus();
   
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,16 +31,24 @@ export function Header() {
         <button onClick={() => setShowSidebar(!showSidebar)} className="p-1.5 rounded-md text-text-dim hover:bg-item-hover hover:text-text-main transition-colors mr-4">
           <SidebarIcon size={18} />
         </button>
-        <h1 className="text-sm font-medium text-text-dim flex items-center truncate gap-2">
-            {activeTag ? (
-              <>
-                <span className="text-text-dim/50">Tag:</span> 
-                <TagBadge tag={activeTag} colorMode={colorMode} onClear={() => setActiveTag(null)} />
-              </>
-            ) : (
-                <span className="font-bold tracking-tight text-text-main/80">Omni</span>
-            )}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-sm font-medium text-text-dim flex items-center truncate gap-2">
+              {activeTag ? (
+                <>
+                  <span className="text-text-dim/50">Tag:</span> 
+                  <TagBadge tag={activeTag} colorMode={colorMode} onClear={() => setActiveTag(null)} />
+                </>
+              ) : (
+                  <span className="font-bold tracking-tight text-text-main/80">Omni</span>
+              )}
+          </h1>
+          {!isOnline && (
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider border border-amber-500/20">
+              <CloudOff size={12} />
+              <span>Offline</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-4">

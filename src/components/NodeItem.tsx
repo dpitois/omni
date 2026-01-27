@@ -29,29 +29,30 @@ export function NodeItem({
   const isFocused = focusedNodeId === node.id;
   const availableTags = useMemo(() => tags.map(t => t.name), [tags]);
 
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const columnRefs = useRef<(any)[]>([]);
   
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [suggestionQuery, setSuggestionQuery] = useState('');
 
+  // Auto-resize for textarea
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.style.height = 'auto';
-      inputRef.current.style.height = inputRef.current.scrollHeight + 'px';
+    if (isFocused && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
   }, [node.text, isFocused]);
 
   useEffect(() => {
     if (isFocused) {
-      if (activeColumnIndex === 0 && inputRef.current) {
-        inputRef.current.focus();
+      if (activeColumnIndex === 0 && textareaRef.current) {
+        textareaRef.current.focus();
       } else if (activeColumnIndex > 0 && columnRefs.current[activeColumnIndex]) {
         columnRefs.current[activeColumnIndex]?.focus?.();
       }
     }
-  }, [isFocused, activeColumnIndex, node.updatedAt]);
+  }, [isFocused, activeColumnIndex]);
 
   const filteredTags = useMemo(() => {
     if (!suggestionQuery) return availableTags.slice(0, 5);
@@ -61,16 +62,16 @@ export function NodeItem({
   }, [availableTags, suggestionQuery]);
 
   const handleFormat = (symbol: string) => {
-    if (!inputRef.current) return;
-    const start = inputRef.current.selectionStart || 0;
-    const end = inputRef.current.selectionEnd || 0;
+    if (!textareaRef.current) return;
+    const start = textareaRef.current.selectionStart || 0;
+    const end = textareaRef.current.selectionEnd || 0;
     const { text, newStart, newEnd } = applyFormat(node.text, start, end, symbol);
     updateNode(node.id, { text });
     
     setTimeout(() => {
-        if (inputRef.current) {
-            inputRef.current.focus();
-            inputRef.current.setSelectionRange(newStart, newEnd);
+        if (textareaRef.current) {
+            textareaRef.current.focus();
+            textareaRef.current.setSelectionRange(newStart, newEnd);
         }
     }, 0);
   };
@@ -102,8 +103,8 @@ export function NodeItem({
         else if (e.key === 'Enter') { e.preventDefault(); handleAdd(); }
         else if (e.key === 'Tab') { e.preventDefault(); if (e.shiftKey) outdentNode(node.id); else indentNode(node.id); }
         else if (e.key === 'Backspace' && node.text === '') { e.preventDefault(); handleDelete(); }
-        else if (e.key === 'ArrowUp' && !e.altKey && inputRef.current?.selectionStart === 0) { focusPrev(visibleNodes, node.id); }
-        else if (e.key === 'ArrowDown' && !e.altKey && inputRef.current?.selectionStart === node.text.length) { focusNext(visibleNodes, node.id); }
+        else if (e.key === 'ArrowUp' && !e.altKey && textareaRef.current?.selectionStart === 0) { focusPrev(visibleNodes, node.id); }
+        else if (e.key === 'ArrowDown' && !e.altKey && textareaRef.current?.selectionStart === node.text.length) { focusNext(visibleNodes, node.id); }
         else if (e.key === 'ArrowUp' && e.altKey) { e.preventDefault(); moveNodeUp(node.id); }
         else if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); moveNodeDown(node.id); }
         else if (e.key === '.' && e.ctrlKey) { e.preventDefault(); toggleCollapse(node.id); }
@@ -127,7 +128,7 @@ export function NodeItem({
   const handleInput = (e: any) => {
     const value = e.currentTarget.value;
     updateNode(node.id, { text: value });
-    const cursor = inputRef.current?.selectionStart || 0;
+    const cursor = textareaRef.current?.selectionStart || 0;
     const textBeforeCursor = value.substring(0, cursor);
     const tagMatch = textBeforeCursor.match(/#(\w*)$/);
     if (tagMatch) {
@@ -141,16 +142,16 @@ export function NodeItem({
 
   const applySuggestion = (tag: string) => {
     const value = node.text;
-    const cursor = inputRef.current?.selectionStart || 0;
+    const cursor = textareaRef.current?.selectionStart || 0;
     const textBeforeCursor = value.substring(0, cursor);
     const textAfterCursor = value.substring(cursor);
     const newTextBefore = textBeforeCursor.replace(/#(\w*)$/, tag);
     updateNode(node.id, { text: newTextBefore + textAfterCursor });
     setShowSuggestions(false);
     setTimeout(() => {
-        if (inputRef.current) {
+        if (textareaRef.current) {
             const newPos = newTextBefore.length;
-            inputRef.current.setSelectionRange(newPos, newPos);
+            textareaRef.current.setSelectionRange(newPos, newPos);
         }
     }, 0);
   };
@@ -160,82 +161,66 @@ export function NodeItem({
     return segments.map((seg, i) => {
       if (seg.isTag) {
         const colors = getTagColor(seg.text);
-        return (
-          <span key={i} className={`px-1 rounded -mx-1 font-medium transition-colors cursor-default inline ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}`}>
-            {seg.text}
-          </span>
-        );
+        return <span key={i} className={`px-1 rounded -mx-1 font-medium transition-colors cursor-default inline ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}`}>{seg.text}</span>;
       }
-      
-      if (seg.isMarker) {
-          if (!isFocused) return null;
-          // Marqueurs plus visibles en édition
-          return <span key={i} className="text-blue-500/40 font-mono font-bold">{seg.text}</span>;
-      }
+      if (seg.isMarker) return null; // Jamais de marqueurs en mode lecture
 
-      // Calcul manuel des décorations de texte pour permettre le cumul (Underline + Line-through)
       const decorations = [];
-      if (!isFocused && seg.underline) decorations.push('underline');
-      if (node.checked || (!isFocused && seg.strikethrough)) decorations.push('line-through');
+      if (seg.underline) decorations.push('underline');
+      if (node.checked || seg.strikethrough) decorations.push('line-through');
 
       const styles = [
-          (!isFocused && seg.bold) ? 'font-bold' : '',
-          (!isFocused && seg.italic) ? 'italic' : '',
-          node.checked ? 'text-text-dim decoration-text-dim/50' : 'text-text-main'
+          seg.bold ? 'font-bold' : '',
+          seg.italic ? 'italic' : '',
+          node.checked ? 'text-text-dim' : 'text-text-main'
       ].join(' ');
 
       return (
-        <span 
-            key={i} 
-            className={styles} 
-            style={{ textDecorationLine: decorations.join(' '), textDecorationThickness: '2px', textUnderlineOffset: '2px' }}
-        >
+        <span key={i} className={styles} style={{ textDecorationLine: decorations.join(' '), textDecorationThickness: '2px', textUnderlineOffset: '2px' }}>
             {seg.text}
         </span>
       );
     });
   };
 
-  const getCursorPosition = () => {
-    if (!inputRef.current) return { x: 0 };
-    const width = getTextWidth(node.text.substring(0, inputRef.current.selectionStart || 0), '16px ui-sans-serif, system-ui');
-    return { x: width + 8 };
-  };
-
   const levelStyles = LEVEL_STYLES[node.level] || LEVEL_STYLES[0];
 
   return (
     <div 
-      className={`group grid items-center py-0.5 relative transition-opacity duration-300 ${isDimmed ? 'opacity-20' : 'opacity-100'} even:bg-black/[0.08] dark:even:bg-white/[0.3] hover:bg-blue-500/5`}
-      style={{ gridTemplateColumns: activeColumns.map(c => c.width).join(' ') }}
+      className={`group flex items-start py-1 relative transition-opacity duration-300 ${isDimmed ? 'opacity-20' : 'opacity-100'} even:bg-black/[0.08] dark:even:bg-white/[0.3] hover:bg-blue-500/5`}
     >
-      <div className="flex items-start min-w-0" style={{ paddingLeft: `${node.level * 28}px` }}>
-        {node.level > 0 && <div className="absolute top-0 bottom-0 w-px bg-border-subtle transition-colors" style={{ left: `${(node.level * 28) - 16}px` }} />}
+      {/* Outline Main Area */}
+      <div className="flex-1 flex items-start min-w-0" style={{ paddingLeft: `${node.level * 28}px` }}>
+        {node.level > 0 && <div className="absolute top-0 bottom-0 w-px bg-border-subtle" style={{ left: `${(node.level * 28) - 16}px` }} />}
         
         <NodeGutter 
-          hasChildren={hasChildren} 
-          collapsed={!!node.collapsed} 
-          checked={node.checked} 
-          isIndeterminate={!!isIndeterminate}
-          onToggleCollapse={() => toggleCollapse(node.id)}
-          onToggleCheck={() => toggleCheck(node.id)}
+          hasChildren={hasChildren} collapsed={!!node.collapsed} checked={node.checked} isIndeterminate={!!isIndeterminate}
+          onToggleCollapse={() => toggleCollapse(node.id)} onToggleCheck={() => toggleCheck(node.id)}
         />
 
-        <div className="flex-1 min-w-0 relative">
-            <div className={`absolute inset-0 pointer-events-none px-2 py-1 select-none whitespace-pre-wrap break-words border border-transparent leading-relaxed z-10 ${levelStyles.fontSize} ${levelStyles.fontWeight}`}>{renderRichText()}</div>
-            <textarea
-                ref={inputRef}
-                value={node.text}
-                onInput={handleInput}
-                onKeyDown={handleKeyDown}
-                onFocus={() => setFocus(node.id, 0)}
-                rows={1}
-                spellcheck={false}
-                className={`w-full bg-transparent border border-transparent outline-none px-2 py-1 leading-relaxed caret-blue-500 text-transparent relative z-0 resize-none overflow-hidden ${levelStyles.fontSize} ${levelStyles.fontWeight} placeholder:text-text-dim/30`}
-            />
+        <div className="flex-1 min-w-0 relative px-2 py-0.5">
+            {isFocused ? (
+                <textarea
+                    ref={textareaRef}
+                    value={node.text}
+                    onInput={handleInput}
+                    onKeyDown={handleKeyDown}
+                    onBlur={() => setShowSuggestions(false)}
+                    rows={1}
+                    spellcheck={false}
+                    className={`w-full bg-transparent border-none outline-none resize-none overflow-hidden leading-relaxed text-text-main caret-blue-500 ${levelStyles.fontSize} ${levelStyles.fontWeight} placeholder:text-text-dim/30`}
+                />
+            ) : (
+                <div 
+                    onClick={() => setFocus(node.id, 0)}
+                    className={`w-full whitespace-pre-wrap break-words leading-relaxed cursor-text ${levelStyles.fontSize} ${levelStyles.fontWeight}`}
+                >
+                    {node.text ? renderRichText() : <span className="text-text-dim/30 italic">Empty node...</span>}
+                </div>
+            )}
 
             {showSuggestions && filteredTags.length > 0 && (
-                <div className="absolute z-50 bg-sidebar-bg border border-border-subtle rounded-lg shadow-xl py-1 w-48 mt-1 backdrop-blur-md overflow-hidden" style={{ left: `${getCursorPosition().x}px`, top: '100%' }}>
+                <div className="absolute z-50 bg-sidebar-bg border border-border-subtle rounded-lg shadow-xl py-1 w-48 mt-1 backdrop-blur-md overflow-hidden left-4 top-full">
                     {filteredTags.map((tag, i) => (
                         <button key={tag} onClick={() => applySuggestion(tag)} className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 transition-colors ${i === suggestionIndex ? 'bg-blue-500 text-white' : 'text-text-main hover:bg-item-hover'}`}>
                             <Hash size={12} className={i === suggestionIndex ? 'text-white' : 'text-text-dim'} />
@@ -247,44 +232,28 @@ export function NodeItem({
         </div>
       </div>
 
-      {activeColumns.slice(1).map((col, idx) => {
-          const colIndex = idx + 1;
-          const val = node.metadata?.[col.id] || (col.type === 'progress' ? 0 : '');
-          
-          return (
-            <div key={col.id} className={`px-4 flex justify-center items-center h-full border-l border-border-subtle transition-colors ${isFocused && activeColumnIndex === colIndex ? 'bg-blue-500/5' : ''}`}>
-               {col.type === 'progress' ? (
-                  <ProgressCell 
-                    value={val} isFocused={isFocused && activeColumnIndex === colIndex} 
-                    onUpdate={(v) => updateMetadata(node.id, col.id, v)}
-                    onKeyDown={handleKeyDown} onFocus={() => setFocus(node.id, colIndex)}
-                  />
-               ) : col.type === 'date' ? (
-                  <DateCell 
-                    value={val} onUpdate={(v) => updateMetadata(node.id, col.id, v)}
-                    onKeyDown={handleKeyDown} onFocus={() => setFocus(node.id, colIndex)}
-                  />
-               ) : (
-                  <TextCell 
-                    value={val} onUpdate={(v) => updateMetadata(node.id, col.id, v)}
-                    onKeyDown={handleKeyDown} onFocus={() => setFocus(node.id, colIndex)}
-                  />
-               )}
-               <div ref={(el) => { if(el) columnRefs.current[colIndex] = el.previousElementSibling; }} className="hidden" />
-            </div>
-          );
-      })}
+      {/* Secondary Columns - Hidden on mobile */}
+      <div className="hidden md:flex items-start">
+        {activeColumns.slice(1).map((col, idx) => {
+            const colIndex = idx + 1;
+            const val = node.metadata?.[col.id] || (col.type === 'progress' ? 0 : '');
+            return (
+                <div key={col.id} style={{ width: col.width }} className={`px-4 flex justify-center items-center min-h-[32px] border-l border-border-subtle transition-colors ${isFocused && activeColumnIndex === colIndex ? 'bg-blue-500/5' : ''}`}>
+                {col.type === 'progress' ? (
+                    <ProgressCell value={val} isFocused={isFocused && activeColumnIndex === colIndex} onUpdate={(v) => updateMetadata(node.id, col.id, v)} onKeyDown={handleKeyDown} onFocus={() => setFocus(node.id, colIndex)} />
+                ) : col.type === 'date' ? (
+                    <DateCell value={val} onUpdate={(v) => updateMetadata(node.id, col.id, v)} onKeyDown={handleKeyDown} onFocus={() => setFocus(node.id, colIndex)} />
+                ) : (
+                    <TextCell value={val} onUpdate={(v) => updateMetadata(node.id, col.id, v)} onKeyDown={handleKeyDown} onFocus={() => setFocus(node.id, colIndex)} />
+                )}
+                <div ref={(el) => { if(el) columnRefs.current[colIndex] = el.previousElementSibling; }} className="hidden" />
+                </div>
+            );
+        })}
+      </div>
     </div>
   );
 }
-
-const canvas = document.createElement('canvas');
-const getTextWidth = (text: string, font: string) => {
-  const context = canvas.getContext('2d');
-  if (!context) return 0;
-  context.font = font;
-  return context.measureText(text).width;
-};
 
 const LEVEL_STYLES = [
   { fontSize: 'text-xl', fontWeight: 'font-semibold' },
