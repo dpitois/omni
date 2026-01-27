@@ -27,33 +27,32 @@ MVO is a high-performance, keyboard-centric hierarchical outliner. It prioritize
     - `FilterContext`: Search and tag filtering logic.
 
 ### 3. Responsive & Offline Patterns
-- **Floating Sidebar:** On mobile/tablet, the sidebar is a fixed overlay with a backdrop. On desktop, it is relative.
-- **Persistent Footer:** Shortcuts are kept in a wrapping footer to ensure they never overlap content and remain accessible on small screens.
-- **Offline First:** All data is in IndexedDB. Use the `useOnlineStatus` hook to display the connectivity state in the UI.
+- **Floating Sidebar:** On mobile/tablet, the sidebar is a fixed overlay with a backdrop.
+- **Persistent Footer:** Shortcuts are kept in a wrapping footer to ensure accessibility.
+- **Offline First:** All data is in IndexedDB. UI reflects connectivity via `useOnlineStatus`.
 
 ### 4. Switch Div/Textarea (Rich Text)
-- To ensure perfect caret alignment and native text wrapping:
-    - **Read Mode:** A `div` renders recursive Markdown styles.
-    - **Edit Mode:** A `textarea` (auto-resize) handles raw text input.
-- Styles are not applied during editing to prevent horizontal caret drift in proportional fonts.
+- **Read Mode:** A `div` renders recursive Markdown styles.
+- **Edit Mode:** A `textarea` (auto-resize) handles raw text input for perfect caret alignment.
 
-### 5. Data Integrity
-- The `useOutliner` hook is the source of truth for structural logic.
-- **Ranks:** Always call `sanitizeNodes` after structural changes to maintain IndexedDB integrity.
+### 5. Data Portability
+- **JSON Format:** The primary exchange format for backups.
+- **Drag'n Drop:** Implemented via `ImportExportZone`. Dropping a valid `.json` file anywhere triggers a full outline replacement (after confirmation).
 
 ## Current State & Roadmap
 - [x] Core Outliner (CRUD, Indent, Move)
 - [x] **Context API Migration:** Full decoupling of components from logic.
-- [x] **Recursive Markdown Parser:** Supports nested styles (Bold, Italic, Underline, Strikethrough).
-- [x] **PWA Support:** Offline mode, manifest, and connectivity indicator.
-- [x] **Responsive Layout:** Floating sidebar, wrapping shortcuts footer, and flexbox-based grid.
+- [x] **Recursive Markdown Parser:** Supports nested styles.
+- [x] **PWA Support:** Offline mode and installation.
+- [x] **Responsive Layout:** Floating sidebar and wrapping shortcuts footer.
+- [x] **Data Portability:** JSON Backup/Restore and global Drag'n Drop import.
 - [x] **Custom Columns:** Dynamic visibility for Status, Date, and Progress slider.
 - [x] **High-Contrast UI:** Zebra-striping (30% dark, 8% light).
 - [x] Global Search across all notes.
 - [ ] Multi-select / Bulk actions
-- [ ] Export to Markdown/JSON
+- [ ] Export to Markdown (current is JSON only)
 
 ## Instructions for Future Agents
-- **Responsive Design:** Use `md:` breakpoints for desktop-only columns and `lg:` for relative vs fixed sidebar positioning.
-- **PWA Updates:** Configuration is in `vite.config.ts`. The service worker is registered in `src/main.tsx`.
-- **Markdown:** Update `src/utils/markdown.ts` for any new syntax. It uses an earliest-match recursive strategy.
+- **Data Integrity:** Always call `sanitizeNodes` during imports or structural changes.
+- **Markdown:** Update `src/utils/markdown.ts` for any new syntax using the recursive strategy.
+- **PWA:** Service worker registration is in `src/main.tsx`.
