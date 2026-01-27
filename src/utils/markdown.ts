@@ -9,7 +9,7 @@ export interface TextSegment {
 }
 
 /**
- * Applique ou retire un format Markdown autour d'une sélection
+ * Applies or removes a Markdown format around a selection
  */
 export function applyFormat(text: string, start: number, end: number, symbol: string): { text: string; newStart: number; newEnd: number } {
   const selection = text.substring(start, end);
@@ -32,12 +32,12 @@ interface MarkdownRule {
 }
 
 /**
- * Parseur récursif optimisé
+ * Optimized recursive Markdown parser
  */
 export function parseMarkdown(text: string, styles: Partial<TextSegment> = {}): TextSegment[] {
   if (!text) return [];
 
-  // Règles ordonnées par spécificité décroissante
+  // Rules ordered by decreasing specificity
   const rules: MarkdownRule[] = [
     { id: 'tag', symbol: '', regex: /#[\w\u00C0-\u00FF]+/ },
     { id: 'bolditalic', symbol: '***', regex: /\*\*\*(.*?)\*\*\*/ },

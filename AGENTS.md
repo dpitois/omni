@@ -27,7 +27,7 @@ MVO is a high-performance, keyboard-centric hierarchical outliner. It prioritize
     - `FilterContext`: Search and tag filtering logic.
 
 ### 3. Responsive & Offline Patterns
-- **Floating Sidebar:** On mobile/tablet, the sidebar is a fixed overlay with a backdrop.
+- **Floating Sidebar:** On mobile/tablet, the sidebar is a fixed overlay with a backdrop. On desktop, it is relative.
 - **Persistent Footer:** Shortcuts are kept in a wrapping footer to ensure accessibility.
 - **Offline First:** All data is in IndexedDB. UI reflects connectivity via `useOnlineStatus`.
 
@@ -49,10 +49,14 @@ MVO is a high-performance, keyboard-centric hierarchical outliner. It prioritize
 - [x] **Custom Columns:** Dynamic visibility for Status, Date, and Progress slider.
 - [x] **High-Contrast UI:** Zebra-striping (30% dark, 8% light).
 - [x] Global Search across all notes.
-- [ ] Multi-select / Bulk actions
-- [ ] Export to Markdown (current is JSON only)
+- [ ] **Multi-select & Bulk Actions:** Shift+Arrows selection, batch indent/check/delete.
+- [ ] **Markdown Export:** Export hierarchy as a standard `.md` file for interoperability.
+- [ ] **Onboarding & Help:** Pre-loaded "Help Outline" for new users and empty states.
+- [ ] **Settings Panel:** Centralized management for columns, themes, and database reset.
+- [ ] **Robustness:** Unit tests for structural logic and advanced error handling for IndexedDB.
 
 ## Instructions for Future Agents
 - **Data Integrity:** Always call `sanitizeNodes` during imports or structural changes.
 - **Markdown:** Update `src/utils/markdown.ts` for any new syntax using the recursive strategy.
-- **PWA:** Service worker registration is in `src/main.tsx`.
+- **Responsive Design:** Use `md:` breakpoints for desktop-only columns and `lg:` for relative vs fixed sidebar positioning.
+- **Performance:** Ensure providers separate state from actions to avoid unnecessary re-renders of the entire tree.

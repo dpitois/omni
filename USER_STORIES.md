@@ -1,45 +1,45 @@
-# Cahier des Charges : Modern Vintage Outliner (MVO)
+# Requirements: Modern Vintage Outliner (MVO)
 
-## 1. Vision du Produit
+## 1. Product Vision
 
-Application web ultra-légère de prise de notes structurée. Fusion de l'ergonomie hiérarchique d'OmniOutliner et du système de tags/vues d'Obsidian.
+Ultra-lightweight structured note-taking web application. A fusion of the hierarchical ergonomics of OmniOutliner and the tag/view system of Obsidian.
 
-## 2. Stack Technique
+## 2. Tech Stack
 
-* Framework : Preact (via ViteJS) pour un bundle minimal.
-* Styling : Tailwind CSS (Look macOS/Aqua moderne).
-* Icons : Lucide-Preact.
-* Architecture : Séparation Logic/View via Hooks personnalisés.
-* Persistence : Abstraction du Storage pour évolution vers API.
+* Framework: Preact (via ViteJS) for minimal bundle size.
+* Styling: Tailwind CSS (Modern macOS/Aqua look).
+* Icons: Lucide-Preact.
+* Architecture: Logic/View separation via custom Hooks.
+* Persistence: Storage abstraction for future API evolution.
 
-## 3. Architecture Logicielle
+## 3. Software Architecture
 
-* useOutliner (Hook) : Gestion de la structure de l'arbre (CRUD, indentation, état).
-* useTags (Hook) : Analyseur de texte pour extraction des tags via regex (/#\w+/g).
-* OutlinerWrapper : Composant de liaison (Glue) entre les hooks et l'UI.
-* NodeItem : Composant de rendu pur pour les lignes.
+* useOutliner (Hook): Tree structure management (CRUD, indentation, state).
+* useTags (Hook): Text analyzer for tag extraction via regex (/#\w+/g).
+* OutlinerWrapper: Glue component between hooks and UI.
+* NodeItem: Pure rendering component for lines.
 
-## 4. Structure des Données
+## 4. Data Structure
 
-Interface Node :
+Node Interface:
 
-* id : string (UUID)
-* text : string
-* level : number (0-5)
-* checked : boolean
-* parentId : string | null
-* updatedAt : number
+* id: string (UUID)
+* text: string
+* level: number (0-5)
+* checked: boolean
+* parentId: string | null
+* updatedAt: number
 
-## 5. Spécifications Fonctionnelles
+## 5. Functional Specifications
 
-* Navigation Clavier : Enter (nouveau nœud), Tab (indenter), Shift+Tab (désindenter), Flèches (navigation).
-* Mode Hiérarchique : Affichage de l'arbre avec marges dynamiques (30px par niveau).
-* Mode Pivot (Tags) : Vue alternative regroupant les nœuds par tags, indépendamment de leur position dans l'arbre.
-* Persistence : Implémentation initiale en LocalStorage, conçue pour injection d'une API REST ultérieure.
+* Keyboard Navigation: Enter (new node), Tab (indent), Shift+Tab (outdent), Arrows (navigation).
+* Hierarchical Mode: Tree display with dynamic margins (30px per level).
+* Pivot Mode (Tags): Alternative view grouping nodes by tags, regardless of their tree position.
+* Persistence: Initial LocalStorage implementation, designed for future REST API injection.
 
-## 6. Design UI
+## 6. UI Design
 
-* Zebra-striping (lignes alternées).
-* Focus automatique lors de la création de ligne.
-* Checkbox de statut pour suivi d'avancement.
-* Typographie système (San Francisco / Segoe UI).
+* Zebra-striping (alternating lines).
+* Automatic focus when creating a line.
+* Status checkbox for progress tracking.
+* System typography (San Francisco / Segoe UI).
