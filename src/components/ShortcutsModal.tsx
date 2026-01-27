@@ -1,9 +1,24 @@
+import { useEffect } from 'preact/hooks';
 import { X, Keyboard } from 'lucide-preact';
 import { useUIState, useUIActions } from '../context/UIContext';
 
 export function ShortcutsModal() {
   const { showShortcutsModal } = useUIState();
   const { setShowShortcutsModal } = useUIActions();
+
+  useEffect(() => {
+    if (!showShortcutsModal) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowShortcutsModal(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showShortcutsModal, setShowShortcutsModal]);
 
   if (!showShortcutsModal) return null;
 
