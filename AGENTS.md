@@ -18,7 +18,10 @@ MVO is a high-performance, keyboard-centric hierarchical outliner. It prioritize
 
 ### 1. Keyboard-First Interaction
 - Any new feature **must** be fully usable via keyboard.
-- Standard formatting: `Ctrl+B` (Bold), `Ctrl+I` (Italic), `Ctrl+U` (Underline), `Ctrl+Shift+S` (Strike).
+- **AZERTY/Windows Friendly:** Prefer `Alt + Key` shortcuts.
+- **Library Navigation:** `Alt + L` to focus, `Arrows` to navigate, `E` to rename tags.
+- **Node Editing:** `Enter` (New), `Tab` (Indent), `Alt + ↕` (Move), `Alt + ↔` (Columns).
+- **Formatting:** `Ctrl+B` (Bold), `Ctrl+I` (Italic), `Ctrl+U` (Underline), `Ctrl+Shift+S` (Strike).
 
 ### 2. Context-Driven Architecture
 - **Prop Drilling is forbidden.** Components should consume domain-specific contexts:
@@ -27,8 +30,8 @@ MVO is a high-performance, keyboard-centric hierarchical outliner. It prioritize
     - `FilterContext`: Search and tag filtering logic.
 
 ### 3. Responsive & Offline Patterns
-- **Floating Sidebar:** On mobile/tablet, the sidebar is a fixed overlay with a backdrop. On desktop, it is relative.
-- **Persistent Footer:** Shortcuts are kept in a wrapping footer to ensure accessibility.
+- **Floating Sidebar:** On mobile/tablet, the sidebar is a fixed overlay with a backdrop. On desktop, it is relative and collapsible.
+- **Persistent Footer:** Shortcuts are kept in a wrapping footer with a "Help" modal (`Alt + H`).
 - **Offline First:** All data is in IndexedDB. UI reflects connectivity via `useOnlineStatus`.
 
 ### 4. Switch Div/Textarea (Rich Text)
@@ -44,7 +47,8 @@ MVO is a high-performance, keyboard-centric hierarchical outliner. It prioritize
 - [x] **Context API Migration:** Full decoupling of components from logic.
 - [x] **Recursive Markdown Parser:** Supports nested styles.
 - [x] **PWA Support:** Offline mode and installation.
-- [x] **Responsive Layout:** Floating sidebar and wrapping shortcuts footer.
+- [x] **Responsive Layout:** Collapsible sidebar (Alt+S) and persistent shortcuts footer.
+- [x] **Keyboard-First Improvements:** Arrow navigation in sidebar, help modal (Alt+H).
 - [x] **Data Portability:** JSON Backup/Restore and global Drag'n Drop import.
 - [x] **Custom Columns:** Dynamic visibility for Status, Date, and Progress slider.
 - [x] **High-Contrast UI:** Zebra-striping (30% dark, 8% light).

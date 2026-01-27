@@ -16,6 +16,7 @@ export function Sidebar() {
 
   const editInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (editingTag && editInputRef.current) {
@@ -37,9 +38,7 @@ export function Sidebar() {
     else if (e.key === 'Escape') setEditingTag(null);
   };
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleImportClick = () => fileInputRef.current?.click();
 
   const handleFileChange = async (e: any) => {
     const file = e.target.files?.[0];
@@ -58,22 +57,52 @@ export function Sidebar() {
     }
   };
 
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (editingTag) return;
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const focusableElements = sidebarRef.current?.querySelectorAll('button');
+      if (!focusableElements) return;
+
+      const elements = Array.from(focusableElements);
+      const currentIndex = elements.indexOf(document.activeElement as HTMLButtonElement);
+      
+      let nextIndex;
+      if (e.key === 'ArrowDown') {
+        nextIndex = (currentIndex + 1) % elements.length;
+      } else {
+        nextIndex = (currentIndex - 1 + elements.length) % elements.length;
+      }
+      
+      elements[nextIndex].focus();
+    }
+
+    // Edit Tag shortcut: 'E' when a tag button is focused
+    if (e.key.toLowerCase() === 'e') {
+        const activeEl = document.activeElement;
+        const tagName = activeEl?.getAttribute('data-tag-name');
+        if (tagName) {
+            e.preventDefault();
+            setEditingTag(tagName);
+            setEditValue(tagName);
+        }
+    }
+  };
+
   return (
     <>
-      {/* Mobile Backdrop */}
       {showSidebar && (
-        <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setShowSidebar(false)}
-        />
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setShowSidebar(false)} />
       )}
 
-      {/* Sidebar Panel */}
-      <div 
+      <aside 
+        ref={sidebarRef}
+        onKeyDown={handleKeyDown}
         className={`
-          fixed inset-y-0 left-0 z-50 w-64 bg-sidebar-bg border-r border-border-subtle flex flex-col transition-transform duration-300 ease-in-out
-          lg:relative lg:translate-x-0
-          ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
+          fixed inset-y-0 left-0 z-50 w-64 bg-sidebar-bg border-r border-border-subtle flex flex-col transition-all duration-300 ease-in-out
+          lg:relative
+          ${showSidebar ? 'translate-x-0 lg:ml-0' : '-translate-x-full lg:-ml-64'}
         `}
       >
         <div className="p-4 pt-6 flex flex-col h-full">
@@ -86,8 +115,9 @@ export function Sidebar() {
           
           <div className="space-y-0.5 flex-1 overflow-y-auto">
             <button 
-              onClick={() => { setActiveTag(null); setShowSidebar(false); }} 
-              className={`w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm transition-colors mb-2 ${(!activeTag && !searchQuery) ? 'bg-blue-500/10 text-blue-500' : 'text-text-dim hover:text-text-main hover:bg-item-hover'}`}
+              id="sidebar-first-btn"
+              onClick={() => { setActiveTag(null); if(window.innerWidth < 1024) setShowSidebar(false); }} 
+              className={`w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm transition-colors mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${(!activeTag && !searchQuery) ? 'bg-blue-500/10 text-blue-500' : 'text-text-dim hover:text-text-main hover:bg-item-hover'}`}
             >
               <SidebarIcon size={14} className="mr-2" />
               All Notes
@@ -113,9 +143,10 @@ export function Sidebar() {
                       />
                     ) : (
                       <button 
-                        onClick={() => { setActiveTag(name); setShowSidebar(false); }} 
+                        onClick={() => { setActiveTag(name); if(window.innerWidth < 1024) setShowSidebar(false); }} 
                         onDblClick={() => { setEditingTag(name); setEditValue(name); }} 
-                        className={`w-full text-left flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-all group ${isActive ? (colorMode ? `${colors.bg} ${colors.text}` : 'bg-blue-500/10 text-blue-500') : 'text-text-dim hover:bg-item-hover hover:text-text-main'}`}
+                        data-tag-name={name}
+                        className={`w-full text-left flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-all group focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${isActive ? (colorMode ? `${colors.bg} ${colors.text}` : 'bg-blue-500/10 text-blue-500') : 'text-text-dim hover:bg-item-hover hover:text-text-main'}`}
                       >
                         <div className="flex items-center truncate">
                           <Hash size={14} className={`mr-2 flex-shrink-0 ${isActive ? (colorMode ? colors.text : 'text-blue-500') : (colorMode ? `${colors.text} opacity-70 group-hover:opacity-100` : 'text-text-dim group-hover:text-blue-500')}`} />
@@ -130,33 +161,26 @@ export function Sidebar() {
             )}
           </div>
 
-          {/* Action Buttons */}
           <div className="mt-4 pt-4 border-t border-border-subtle space-y-1">
             <h2 className="text-[10px] font-bold text-text-dim uppercase tracking-widest px-2 mb-2">Actions</h2>
             <button 
               onClick={() => exportData(nodes)}
-              className="w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm text-text-dim hover:text-text-main hover:bg-item-hover transition-colors"
+              className="w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm text-text-dim hover:text-text-main hover:bg-item-hover transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
               <Download size={14} className="mr-2" />
               Backup JSON
             </button>
             <button 
               onClick={handleImportClick}
-              className="w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm text-text-dim hover:text-text-main hover:bg-item-hover transition-colors"
+              className="w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm text-text-dim hover:text-text-main hover:bg-item-hover transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
               <Upload size={14} className="mr-2" />
               Restore JSON
             </button>
-            <input 
-              ref={fileInputRef}
-              type="file" 
-              accept=".json" 
-              onChange={handleFileChange}
-              className="hidden" 
-            />
+            <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" />
           </div>
         </div>
-      </div>
+      </aside>
     </>
   );
 }

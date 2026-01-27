@@ -9,6 +9,7 @@ interface UIState {
   colorMode: boolean;
   showSidebar: boolean;
   showColumnMenu: boolean;
+  showShortcutsModal: boolean;
   visibleColumnIds: string[];
   activeColumns: Column[];
   focusedNodeId: string | null;
@@ -22,6 +23,7 @@ interface UIActions {
   setColorMode: (color: boolean) => void;
   setShowSidebar: (show: boolean) => void;
   setShowColumnMenu: (show: boolean) => void;
+  setShowShortcutsModal: (show: boolean) => void;
   toggleColumnVisibility: (id: string) => void;
   setFocus: (id: string | null, colIdx?: number) => void;
   setEditingTag: (tag: string | null) => void;
@@ -35,46 +37,43 @@ const UIActionsContext = createContext<UIActions | undefined>(undefined);
 
 export function UIProvider({ children }: { children: ComponentChildren }) {
   const { darkMode, setDarkMode } = useTheme();
-  const { 
-    colorMode, setColorMode, 
-    showSidebar, setShowSidebar, 
-    showColumnMenu, setShowColumnMenu, 
-    visibleColumnIds, activeColumns, toggleColumnVisibility,
-    focusedNodeId, activeColumnIndex, setFocus 
-  } = useOutlinerUI();
+  const ui = useOutlinerUI();
 
   const [editingTag, setEditingTag] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   const state: UIState = {
     darkMode,
-    colorMode,
-    showSidebar,
-    showColumnMenu,
-    visibleColumnIds,
-    activeColumns,
-    focusedNodeId,
-    activeColumnIndex,
+    colorMode: ui.colorMode,
+    showSidebar: ui.showSidebar,
+    showColumnMenu: ui.showColumnMenu,
+    showShortcutsModal,
+    visibleColumnIds: ui.visibleColumnIds,
+    activeColumns: ui.activeColumns,
+    focusedNodeId: ui.focusedNodeId,
+    activeColumnIndex: ui.activeColumnIndex,
     editingTag,
     editValue
   };
 
   const actions: UIActions = {
     setDarkMode,
-    setColorMode,
-    setShowSidebar,
-    setShowColumnMenu,
-    toggleColumnVisibility,
-    setFocus,
+    setColorMode: ui.setColorMode,
+    setShowSidebar: ui.setShowSidebar,
+    setShowColumnMenu: ui.setShowColumnMenu,
+    setShowShortcutsModal,
+    toggleColumnVisibility: ui.toggleColumnVisibility,
+    setFocus: ui.setFocus,
     setEditingTag,
     setEditValue,
     focusPrev: (nodes, currentId) => {
         const index = nodes.findIndex(n => n.id === currentId);
-        if (index > 0) setFocus(nodes[index - 1].id, 0);
+        if (index > 0) ui.setFocus(nodes[index - 1].id, 0);
     },
     focusNext: (nodes, currentId) => {
         const index = nodes.findIndex(n => n.id === currentId);
-        if (index < nodes.length - 1) setFocus(nodes[index + 1].id, 0);
+        if (index < nodes.length - 1) ui.setFocus(nodes[index + 1].id, 0);
     }
   };
 

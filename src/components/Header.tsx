@@ -28,7 +28,11 @@ export function Header() {
   return (
     <header className="h-14 flex items-center justify-between px-6 border-b border-border-subtle bg-app-bg/80 backdrop-blur-md z-30 sticky top-0 flex-shrink-0">
       <div className="flex items-center flex-1">
-        <button onClick={() => setShowSidebar(!showSidebar)} className="p-1.5 rounded-md text-text-dim hover:bg-item-hover hover:text-text-main transition-colors mr-4">
+        <button 
+          onClick={() => setShowSidebar(!showSidebar)} 
+          className="p-1.5 rounded-md text-text-dim hover:bg-item-hover hover:text-text-main transition-colors mr-4 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          title="Toggle Sidebar (Alt+S)"
+        >
           <SidebarIcon size={18} />
         </button>
         <div className="flex items-center gap-3">
@@ -55,11 +59,15 @@ export function Header() {
         <SearchBar value={searchQuery} onChange={setSearchQuery} inputRef={searchInputRef} />
 
         <div className="flex items-center gap-1 border-l border-border-subtle pl-4">
-          <IconButton onClick={() => setColorMode(!colorMode)} active={colorMode} title="Toggle Colors"><Palette size={14} /></IconButton>
-          <IconButton onClick={() => setDarkMode(!darkMode)} title="Toggle Theme">{darkMode ? <Sun size={14} /> : <Moon size={14} />}</IconButton>
+          <IconButton onClick={() => setColorMode(!colorMode)} active={colorMode} title="Toggle Colors (Alt+C)"><Palette size={14} /></IconButton>
+          <IconButton onClick={() => setDarkMode(!darkMode)} title="Toggle Theme (Alt+T)">{darkMode ? <Sun size={14} /> : <Moon size={14} />}</IconButton>
           
           <div className="relative ml-2">
-            <button onClick={() => setShowColumnMenu(!showColumnMenu)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors border ${showColumnMenu ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' : 'text-text-dim border-border-subtle hover:bg-item-hover hover:text-text-main'}`}>
+            <button 
+              onClick={() => setShowColumnMenu(!showColumnMenu)} 
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors border focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${showColumnMenu ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' : 'text-text-dim border-border-subtle hover:bg-item-hover hover:text-text-main'}`}
+              title="Toggle Columns (Alt+K)"
+            >
               <Columns size={14} />
               <span>Columns</span>
             </button>
@@ -84,7 +92,7 @@ function TagBadge({ tag, colorMode, onClear }: { tag: string, colorMode: boolean
       <span className={`px-2 py-0.5 rounded text-xs ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}`}>
         {tag}
       </span>
-      <button onClick={onClear} className="ml-2 hover:bg-item-hover p-1 rounded-full"><X size={12}/></button>
+      <button onClick={onClear} className="ml-2 hover:bg-item-hover p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20"><X size={12}/></button>
     </div>
   );
 }
@@ -98,8 +106,8 @@ function SearchBar({ value, onChange, inputRef }: { value: string, onChange: (v:
         type="text" 
         value={value} 
         onInput={(e) => onChange(e.currentTarget.value)} 
-        placeholder="Search..." 
-        className="w-full bg-sidebar-bg/50 border border-border-subtle rounded-full py-1.5 pl-9 pr-4 text-sm text-text-main focus:outline-none focus:border-blue-500/50 focus:bg-sidebar-bg transition-all" 
+        placeholder="Search... (Ctrl+F)" 
+        className="w-full bg-sidebar-bg/50 border border-border-subtle rounded-full py-1.5 pl-9 pr-4 text-sm text-text-main focus:outline-none focus:border-blue-500/50 focus:bg-sidebar-bg transition-all focus:ring-2 focus:ring-blue-500/20" 
       />
     </div>
   );
@@ -109,7 +117,7 @@ function IconButton({ children, onClick, active, title }: any) {
     return (
         <button 
             onClick={onClick} 
-            className={`p-1.5 rounded transition-colors ${active ? 'text-text-main bg-app-bg shadow-sm' : 'text-text-dim hover:text-text-main'}`}
+            className={`p-1.5 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${active ? 'text-text-main bg-app-bg shadow-sm' : 'text-text-dim hover:text-text-main'}`}
             title={title}
         >
             {children}
@@ -122,7 +130,11 @@ function ColumnDropdown({ columns, visibleIds, onToggle }: any) {
     <div className="absolute right-0 mt-2 w-48 bg-sidebar-bg border border-border-subtle rounded-lg shadow-xl py-2 z-50 backdrop-blur-md">
       <div className="px-3 py-1 mb-1 text-[10px] font-bold text-text-dim uppercase tracking-wider">Display Columns</div>
       {columns.slice(1).map((col: any) => (
-        <button key={col.id} onClick={() => onToggle(col.id)} className="w-full flex items-center justify-between px-3 py-2 text-sm text-text-main hover:bg-item-hover transition-colors">
+        <button 
+          key={col.id} 
+          onClick={() => onToggle(col.id)} 
+          className="w-full flex items-center justify-between px-3 py-2 text-sm text-text-main hover:bg-item-hover transition-colors focus:outline-none focus:bg-item-hover"
+        >
           <span>{col.label}</span>
           {visibleIds.includes(col.id) && <Check size={14} className="text-blue-500" />}
         </button>

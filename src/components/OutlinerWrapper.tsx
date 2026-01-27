@@ -1,4 +1,4 @@
-import { useMemo } from 'preact/hooks';
+import { useMemo, useEffect } from 'preact/hooks';
 import { OutlinerProvider, useOutlinerData } from '../context/OutlinerContext';
 import { UIProvider, useUIState, useUIActions } from '../context/UIContext';
 import { FilterProvider, useFilterState } from '../context/FilterContext';
@@ -7,6 +7,7 @@ import { NodeItem } from './NodeItem';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { ShortcutsLegend } from './ShortcutsLegend';
+import { ShortcutsModal } from './ShortcutsModal';
 import { ImportExportZone } from './ImportExportZone';
 
 export function OutlinerWrapper() {
@@ -26,10 +27,60 @@ export function OutlinerWrapper() {
 function OutlinerContent() {
   const { nodes, isLoading } = useOutlinerData();
   const { visibleNodesInfo } = useFilterState();
-  const { activeColumns } = useUIState();
-  const { setFocus } = useUIActions();
+  const { activeColumns, showSidebar, colorMode, darkMode, showColumnMenu, showShortcutsModal } = useUIState();
+  const { setFocus, setShowSidebar, setColorMode, setDarkMode, setShowColumnMenu, setShowShortcutsModal } = useUIActions();
 
   const gridTemplate = useMemo(() => activeColumns.map(c => c.width).join(' '), [activeColumns]);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (!e.altKey) return;
+
+      // Sidebar Toggle: Alt + S
+      if (e.code === 'KeyS') {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowSidebar(!showSidebar);
+      }
+      // Sidebar Focus: Alt + L (Library)
+      if (e.code === 'KeyL') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!showSidebar) setShowSidebar(true);
+        // On attend la fin de l'animation/rendu pour focus
+        setTimeout(() => {
+            const firstBtn = document.getElementById('sidebar-first-btn');
+            if (firstBtn) firstBtn.focus();
+        }, 100);
+      }
+      // Theme Toggle: Alt + T
+      if (e.code === 'KeyT') {
+        e.preventDefault();
+        e.stopPropagation();
+        setDarkMode(!darkMode);
+      }
+      // Colors Toggle: Alt + C
+      if (e.code === 'KeyC') {
+        e.preventDefault();
+        e.stopPropagation();
+        setColorMode(!colorMode);
+      }
+      // Columns Menu: Alt + K
+      if (e.code === 'KeyK') {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowColumnMenu(!showColumnMenu);
+      }
+      // Shortcuts Help: Alt + H
+      if (e.code === 'KeyH') {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowShortcutsModal(!showShortcutsModal);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown, true);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
+  }, [showSidebar, setShowSidebar, darkMode, setDarkMode, colorMode, setColorMode, showColumnMenu, setShowColumnMenu, showShortcutsModal, setShowShortcutsModal]);
 
   const indeterminateStates = useMemo(() => {
     const states: Record<string, boolean> = {};
@@ -54,7 +105,6 @@ function OutlinerContent() {
       <div className="flex-1 flex flex-col h-full bg-app-bg min-w-0" style={{ '--grid-template': gridTemplate } as any}>
         <Header />
 
-        {/* Scrollable Area */}
         <div className="flex-1 overflow-y-auto relative" onClick={() => setFocus(null)}>
           <div className="max-w-7xl mx-auto py-12 px-8 sm:px-12 pb-40 relative z-10" onClick={(e) => e.stopPropagation()}>
              {/* Column Header */}
@@ -86,9 +136,10 @@ function OutlinerContent() {
           </div>
         </div>
 
-        {/* Persistent Footer */}
         <ShortcutsLegend />
       </div>
+
+      <ShortcutsModal />
     </div>
   );
 }

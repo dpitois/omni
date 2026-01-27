@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { OutlinerWrapper } from './components/OutlinerWrapper';
+import { App } from './app';
 import './index.css';
 
 // PWA Service Worker Registration
@@ -9,4 +9,4 @@ if (typeof window !== 'undefined') {
   registerSW({ immediate: true });
 }
 
-render(<OutlinerWrapper />, document.getElementById('app')!);
+render(<App />, document.getElementById('app')!);
