@@ -206,7 +206,7 @@ export function NodeItem({
 
   return (
     <div 
-      className={`group grid items-center py-0.5 relative transition-opacity duration-300 ${isDimmed ? 'opacity-20' : 'opacity-100'}`}
+      className={`group grid items-center py-0.5 relative transition-opacity duration-300 ${isDimmed ? 'opacity-20' : 'opacity-100'} even:bg-black/[0.08] dark:even:bg-white/[0.3] hover:bg-blue-500/5`}
       style={{ gridTemplateColumns: activeColumns.map(c => c.width).join(' ') }}
     >
       <div className="flex items-start min-w-0" style={{ paddingLeft: `${node.level * 28}px` }}>

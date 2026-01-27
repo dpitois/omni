@@ -1,6 +1,6 @@
 import { useMemo } from 'preact/hooks';
 import { OutlinerProvider, useOutlinerData } from '../context/OutlinerContext';
-import { UIProvider, useUIState } from '../context/UIContext';
+import { UIProvider, useUIState, useUIActions } from '../context/UIContext';
 import { FilterProvider, useFilterState } from '../context/FilterContext';
 
 import { NodeItem } from './NodeItem';
@@ -24,6 +24,7 @@ function OutlinerContent() {
   const { nodes, isLoading } = useOutlinerData();
   const { visibleNodesInfo } = useFilterState();
   const { activeColumns } = useUIState();
+  const { setFocus } = useUIActions();
 
   const indeterminateStates = useMemo(() => {
     const states: Record<string, boolean> = {};
@@ -48,9 +49,9 @@ function OutlinerContent() {
       <div className="flex-1 flex flex-col h-full bg-app-bg min-w-0">
         <Header />
 
-        <div className="flex-1 overflow-y-auto relative">
+        <div className="flex-1 overflow-y-auto relative" onClick={() => setFocus(null)}>
           <ShortcutsLegend />
-          <div className="max-w-7xl mx-auto py-12 px-8 sm:px-12 pb-40 relative z-10">
+          <div className="max-w-7xl mx-auto py-12 px-8 sm:px-12 pb-40 relative z-10" onClick={(e) => e.stopPropagation()}>
              <div className="grid border-b border-border-subtle mb-4 pb-2 sticky top-0 bg-app-bg/90 backdrop-blur-sm z-20" style={{ gridTemplateColumns: activeColumns.map(c => c.width).join(' ') }}>
                 {activeColumns.map((col, idx) => (
                     <div key={col.id} className={`text-[10px] font-bold uppercase tracking-widest text-text-dim/50 ${idx > 0 ? 'px-4 border-l border-border-subtle text-center' : 'px-8'}`}>
