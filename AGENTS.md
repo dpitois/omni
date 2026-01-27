@@ -36,6 +36,7 @@ MVO is a high-performance, keyboard-centric hierarchical outliner. It prioritize
 - [x] Tag System (Extraction, Filtering, Renaming, Counts)
 - [x] IndexedDB Persistence
 - [x] Theming system (Light/Dark variants via CSS variables)
+- [x] **Modular Architecture:** Fully decomposed components (Header, Sidebar, Gutter, Cells).
 - [x] Global Search across all notes.
 - [x] **Custom Columns:** Support for extra fields per node (text, date, progress slider).
 - [ ] Multi-select / Bulk actions
