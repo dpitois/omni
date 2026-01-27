@@ -1,19 +1,21 @@
 import { useRef, useEffect } from 'preact/hooks';
-import { Hash, Sidebar as SidebarIcon, X } from 'lucide-preact';
+import { Hash, Sidebar as SidebarIcon, X, Download, Upload } from 'lucide-preact';
 import { getTagColor } from '../utils/colors';
 import { useUIState, useUIActions } from '../context/UIContext';
 import { useOutlinerData, useOutlinerActions } from '../context/OutlinerContext';
 import { useFilterState, useFilterActions } from '../context/FilterContext';
+import { exportData } from './ImportExportZone';
 
 export function Sidebar() {
   const { showSidebar, colorMode, editingTag, editValue } = useUIState();
   const { setEditingTag, setEditValue, setShowSidebar } = useUIActions();
-  const { tags } = useOutlinerData();
-  const { renameTag } = useOutlinerActions();
+  const { nodes, tags } = useOutlinerData();
+  const { renameTag, importNodes } = useOutlinerActions();
   const { activeTag, searchQuery } = useFilterState();
   const { setActiveTag } = useFilterActions();
 
   const editInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editingTag && editInputRef.current) {
@@ -33,6 +35,27 @@ export function Sidebar() {
   const handleEditKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter') handleRename();
     else if (e.key === 'Escape') setEditingTag(null);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: any) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const text = await file.text();
+      try {
+        const importedNodes = JSON.parse(text);
+        if (Array.isArray(importedNodes)) {
+          if (confirm(`Import ${importedNodes.length} nodes?`)) {
+            await importNodes(importedNodes);
+          }
+        }
+      } catch (err) {
+        alert("Invalid JSON file.");
+      }
+    }
   };
 
   return (
@@ -105,6 +128,32 @@ export function Sidebar() {
                 );
               })
             )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="mt-4 pt-4 border-t border-border-subtle space-y-1">
+            <h2 className="text-[10px] font-bold text-text-dim uppercase tracking-widest px-2 mb-2">Actions</h2>
+            <button 
+              onClick={() => exportData(nodes)}
+              className="w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm text-text-dim hover:text-text-main hover:bg-item-hover transition-colors"
+            >
+              <Download size={14} className="mr-2" />
+              Backup JSON
+            </button>
+            <button 
+              onClick={handleImportClick}
+              className="w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm text-text-dim hover:text-text-main hover:bg-item-hover transition-colors"
+            >
+              <Upload size={14} className="mr-2" />
+              Restore JSON
+            </button>
+            <input 
+              ref={fileInputRef}
+              type="file" 
+              accept=".json" 
+              onChange={handleFileChange}
+              className="hidden" 
+            />
           </div>
         </div>
       </div>

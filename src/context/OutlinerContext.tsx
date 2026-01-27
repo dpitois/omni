@@ -22,6 +22,7 @@ interface OutlinerActions {
   moveNodeUp: (id: string) => void;
   moveNodeDown: (id: string) => void;
   renameTag: (oldTag: string, newTag: string) => void;
+  importNodes: (newNodes: Node[]) => Promise<void>;
 }
 
 const DataContext = createContext<OutlinerData | undefined>(undefined);
@@ -31,7 +32,7 @@ export function OutlinerProvider({ children }: { children: ComponentChildren }) 
   const { nodes, isLoading, ...actions } = useOutliner();
   const { tags } = useTags(nodes);
 
-  const memoActions = useMemo(() => actions, []);
+  const memoActions = useMemo(() => actions, [actions]);
 
   return (
     <DataContext.Provider value={{ nodes, tags, isLoading }}>

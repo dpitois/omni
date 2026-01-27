@@ -7,13 +7,16 @@ import { NodeItem } from './NodeItem';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { ShortcutsLegend } from './ShortcutsLegend';
+import { ImportExportZone } from './ImportExportZone';
 
 export function OutlinerWrapper() {
   return (
     <OutlinerProvider>
       <UIProvider>
         <FilterProvider>
-          <OutlinerContent />
+          <ImportExportZone>
+            <OutlinerContent />
+          </ImportExportZone>
         </FilterProvider>
       </UIProvider>
     </OutlinerProvider>

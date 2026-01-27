@@ -294,6 +294,12 @@ export function useOutliner() {
     });
   }, []);
 
+  const importNodes = useCallback(async (newNodes: Node[]) => {
+    const sanitized = sanitizeNodes(newNodes);
+    setNodes(sanitized);
+    await storage.saveNodes(sanitized);
+  }, [sanitizeNodes]);
+
   return {
     nodes,
     isLoading,
@@ -307,6 +313,7 @@ export function useOutliner() {
     outdentNode,
     moveNodeUp,
     moveNodeDown,
-    renameTag
+    renameTag,
+    importNodes
   };
 }
