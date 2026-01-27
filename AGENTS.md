@@ -10,6 +10,7 @@ MVO is a high-performance, keyboard-centric hierarchical outliner. It prioritize
 - **Styling:** Tailwind CSS v4 (CSS-first config).
 - **Icons:** Lucide-Preact.
 - **Storage:** IndexedDB (Atomic saves).
+- **Theme:** Variable-based (CSS variables) with Light/Dark modes.
 
 ## Critical Architectural Rules
 
@@ -34,11 +35,13 @@ MVO is a high-performance, keyboard-centric hierarchical outliner. It prioritize
 - [x] Folding/Collapsing
 - [x] Tag System (Extraction, Filtering, Renaming, Counts)
 - [x] IndexedDB Persistence
+- [x] Theming system (Light/Dark variants via CSS variables)
 - [ ] Multi-select / Bulk actions
 - [ ] Export to Markdown/JSON
-- [ ] Theming system (Light/Dark variants)
+- [ ] **Custom Columns (Limited):** Add support for extra fields per node (e.g., progress slider, custom text field).
+- [ ] Global Search across all notes.
 
 ## Instructions for Future Agents
 - **Refactoring:** Always check `useOutliner.ts` before modifying tree logic. It uses a flat-list representation of a tree.
-- **UI:** Maintain the macOS/Macular aesthetic (neutral tones, subtle borders, high-quality typography).
-- **Performance:** Memoize component props and use `useCallback` for all event handlers.
+- **Theming:** Use semantic classes (e.g., `bg-app-bg`, `text-text-main`) defined in `index.css`. Avoid hardcoding hex colors in components.
+- **Performance:** Memoize component props (like `tagNames` in `OutlinerWrapper`) and use `useCallback` for all event handlers.
