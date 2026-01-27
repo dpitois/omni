@@ -39,7 +39,7 @@ export function NodeItem({
     if (isFocused && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [isFocused, node.updatedAt]); // Re-focus if node updated (e.g. moved)
+  }, [isFocused, node.updatedAt]);
 
   const filteredTags = useMemo(() => {
     if (!suggestionQuery) return availableTags.slice(0, 5);
@@ -49,7 +49,6 @@ export function NodeItem({
   }, [availableTags, suggestionQuery]);
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    // Autocomplete handling
     if (showSuggestions) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -72,7 +71,6 @@ export function NodeItem({
       }
     }
 
-    // Standard Outliner shortcuts
     if (e.key === 'Enter' && e.ctrlKey) {
         e.preventDefault();
         onToggleCheck(node.id);
@@ -110,7 +108,6 @@ export function NodeItem({
     const value = e.target.value;
     onUpdate(node.id, { text: value });
 
-    // Tag suggestion logic
     const cursor = inputRef.current?.selectionStart || 0;
     const textBeforeCursor = value.substring(0, cursor);
     const tagMatch = textBeforeCursor.match(/#(\w*)$/);
@@ -134,7 +131,6 @@ export function NodeItem({
     onUpdate(node.id, { text: newTextBefore + textAfterCursor });
     setShowSuggestions(false);
     
-    // Position cursor after tag
     setTimeout(() => {
         if (inputRef.current) {
             const newPos = newTextBefore.length;
@@ -149,18 +145,17 @@ export function NodeItem({
       if (part.startsWith('#')) {
         const colors = getTagColor(part);
         return (
-          <span key={i} className={`px-1 rounded mx-0.5 font-medium transition-colors cursor-default
+          <span key={i} className={`px-1 rounded mx-0.25 font-medium transition-colors cursor-default inline-block
             ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}
           `}>
             {part}
           </span>
         );
       }
-      return <span key={i}>{part}</span>;
+      return <span key={i} className={node.checked ? 'text-text-dim line-through decoration-text-dim/50' : 'text-text-main'}>{part}</span>;
     });
   };
 
-  // Measurement for popup position
   const getCursorPosition = () => {
     if (!inputRef.current) return { x: 0 };
     const cursor = inputRef.current.selectionStart || 0;
@@ -176,12 +171,10 @@ export function NodeItem({
       className={`group flex items-start py-0.5 relative transition-opacity duration-300 ${isDimmed ? 'opacity-20' : 'opacity-100'}`}
       style={{ marginLeft: `${node.level * 28}px` }}
     >
-      {/* Hierarchy Indicator (Vertical Line) */}
       {node.level > 0 && (
         <div className="absolute -left-4 top-0 bottom-0 w-px bg-border-subtle group-hover:bg-text-dim/20 transition-colors" />
       )}
 
-      {/* Folding Toggle / Bullet */}
       <div className="w-8 h-8 flex items-center justify-center flex-shrink-0 relative">
          {hasChildren ? (
            <button 
@@ -200,7 +193,6 @@ export function NodeItem({
          )}
       </div>
 
-      {/* Checkbox */}
       <div className="pt-2 px-1 flex-shrink-0">
         <button 
           onClick={() => onToggleCheck(node.id)}
@@ -218,13 +210,14 @@ export function NodeItem({
         </button>
       </div>
 
-      {/* Text Area */}
+      {/* Text Area Container */}
       <div className="flex-1 min-w-0 relative">
-        {/* Invisible Overlay for tag rendering */}
-        <div className={`absolute inset-0 pointer-events-none px-2 py-1 select-none whitespace-pre-wrap break-words leading-relaxed ${styles.fontSize} ${styles.fontWeight} text-transparent`}>
+        {/* Render Layer (Above) */}
+        <div className={`absolute inset-0 pointer-events-none px-2 py-1 select-none whitespace-pre-wrap break-words border border-transparent leading-relaxed z-10 ${styles.fontSize} ${styles.fontWeight}`}>
           {renderTextWithTags()}
         </div>
 
+        {/* Input Layer (Below, transparent text, visible caret) */}
         <input
           ref={inputRef}
           value={node.text}
@@ -232,10 +225,9 @@ export function NodeItem({
           onKeyDown={handleKeyDown}
           onFocus={() => setFocus(node.id)}
           onBlur={() => setTimeout(() => setFocus(null), 100)}
-          placeholder={node.level === 0 ? "Start typing..." : ""}
-          className={`w-full bg-transparent border-none outline-none px-2 py-1 leading-relaxed caret-blue-500
+          placeholder={node.level === 0 && !node.text ? "Start typing..." : ""}
+          className={`w-full bg-transparent border border-transparent outline-none px-2 py-1 leading-relaxed caret-blue-500 text-transparent relative z-0
             ${styles.fontSize} ${styles.fontWeight} 
-            ${node.checked ? 'text-text-dim line-through decoration-text-dim/50' : 'text-text-main'}
             placeholder:text-text-dim/30
           `}
         />
@@ -265,7 +257,6 @@ export function NodeItem({
   );
 }
 
-// Helper to measure text width for popup positioning - Shared Canvas Singleton
 const canvas = document.createElement('canvas');
 const getTextWidth = (text: string, font: string) => {
   const context = canvas.getContext('2d');
