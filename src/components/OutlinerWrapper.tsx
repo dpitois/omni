@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'preact/hooks';
 import { useOutliner } from '../hooks/useOutliner';
 import { useTags } from '../hooks/useTags';
 import { NodeItem } from './NodeItem';
-import { Hash, Sidebar as SidebarIcon, X, Palette } from 'lucide-preact';
+import { Hash, Sidebar as SidebarIcon, X, Palette, Sun, Moon } from 'lucide-preact';
 import { getTagColor } from '../utils/colors';
 
 export function OutlinerWrapper() {
@@ -12,6 +12,25 @@ export function OutlinerWrapper() {
   const [showSidebar, setShowSidebar] = useState(true);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [colorMode, setColorMode] = useState(true);
+  
+  // Theme Management
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('mvo_theme');
+    return saved ? saved === 'dark' : true; // Default to dark
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (darkMode) {
+      root.classList.add('dark');
+      localStorage.setItem('mvo_theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('mvo_theme', 'light');
+    }
+  }, [darkMode]);
+
+  const tagNames = useMemo(() => tags.map(t => t.name), [tags]);
 
   // Tag Editing State
   const [editingTag, setEditingTag] = useState<string | null>(null);
@@ -114,7 +133,6 @@ export function OutlinerWrapper() {
   }, [nodes, activeTag]);
 
   const visibleNodes = visibleNodesInfo.map(info => info.node);
-  const tagNames = useMemo(() => tags.map(t => t.name), [tags]);
 
   const indeterminateStates = useMemo(() => {
     const states: Record<string, boolean> = {};
@@ -160,27 +178,36 @@ export function OutlinerWrapper() {
   };
 
   return (
-    <div className="flex h-screen bg-[#191919] text-neutral-300 font-sans selection:bg-blue-500/30">
+    <div className="flex h-screen bg-app-bg text-text-main font-sans selection:bg-blue-500/30 overflow-hidden">
       
       {/* Sidebar */}
-      <div className={`${showSidebar ? 'w-64 opacity-100' : 'w-0 opacity-0 overflow-hidden'} transition-all duration-300 ease-in-out bg-[#202020] border-r border-white/5 flex flex-col flex-shrink-0`}>
+      <div className={`${showSidebar ? 'w-64 opacity-100' : 'w-0 opacity-0 overflow-hidden'} transition-all duration-300 ease-in-out bg-sidebar-bg border-r border-border-subtle flex flex-col flex-shrink-0`}>
         <div className="p-4 pt-6 flex flex-col h-full">
           <div className="flex items-center justify-between mb-4 px-2">
-            <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-widest">Library</h2>
-            <button 
-              onClick={() => setColorMode(!colorMode)} 
-              className={`p-1 rounded transition-colors ${colorMode ? 'text-neutral-300 bg-white/10' : 'text-neutral-600 hover:text-neutral-400'}`}
-              title="Toggle Colors"
-            >
-              <Palette size={12} />
-            </button>
+            <h2 className="text-xs font-semibold text-text-dim uppercase tracking-widest">Library</h2>
+            <div className="flex items-center gap-1">
+                <button 
+                onClick={() => setColorMode(!colorMode)} 
+                className={`p-1.5 rounded transition-colors ${colorMode ? 'text-text-main bg-app-bg shadow-sm' : 'text-text-dim hover:text-text-main'}`}
+                title="Toggle Colors"
+                >
+                <Palette size={14} />
+                </button>
+                <button 
+                onClick={() => setDarkMode(!darkMode)} 
+                className="p-1.5 rounded text-text-dim hover:text-text-main transition-colors"
+                title="Toggle Theme"
+                >
+                {darkMode ? <Sun size={14} /> : <Moon size={14} />}
+                </button>
+            </div>
           </div>
           
           <div className="space-y-0.5 flex-1 overflow-y-auto">
             <button 
                 onClick={() => setActiveTag(null)}
                 className={`w-full text-left flex items-center px-2 py-1.5 rounded-md text-sm transition-colors mb-2
-                  ${!activeTag ? 'bg-blue-500/10 text-blue-400' : 'text-neutral-400 hover:text-neutral-100 hover:bg-white/5'}
+                  ${!activeTag ? 'bg-blue-500/10 text-blue-500' : 'text-text-dim hover:text-text-main hover:bg-item-hover'}
                 `}
             >
               <SidebarIcon size={14} className="mr-2" />
@@ -188,7 +215,7 @@ export function OutlinerWrapper() {
             </button>
 
             {tags.length === 0 ? (
-               <div className="px-2 py-2 text-sm text-neutral-600 italic">No tags yet</div>
+               <div className="px-2 py-2 text-sm text-text-dim italic">No tags yet</div>
             ) : (
               tags.map(({ name, count }) => {
                 const colors = getTagColor(name);
@@ -204,7 +231,7 @@ export function OutlinerWrapper() {
                       onInput={(e) => setEditValue(e.currentTarget.value)}
                       onBlur={handleRename}
                       onKeyDown={handleEditKeyDown}
-                      className="w-full bg-[#191919] border border-blue-500/50 rounded-md px-2 py-1 text-sm text-white outline-none"
+                      className="w-full bg-app-bg border border-blue-500/50 rounded-md px-2 py-1 text-sm text-text-main outline-none"
                     />
                   ) : (
                     <button 
@@ -212,8 +239,8 @@ export function OutlinerWrapper() {
                       onDblClick={() => startEditing(name)}
                       className={`w-full text-left flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-all group
                         ${isActive 
-                           ? (colorMode ? `${colors.bg} ${colors.text}` : 'bg-blue-500/10 text-blue-400')
-                           : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-100'
+                           ? (colorMode ? `${colors.bg} ${colors.text}` : 'bg-blue-500/10 text-blue-500')
+                           : 'text-text-dim hover:bg-item-hover hover:text-text-main'
                         }
                       `}
                       title="Double click to rename"
@@ -221,18 +248,17 @@ export function OutlinerWrapper() {
                       <div className="flex items-center truncate">
                         <Hash size={14} className={`mr-2 flex-shrink-0 
                           ${isActive 
-                            ? (colorMode ? colors.text : 'text-blue-400') 
-                            : (colorMode ? `${colors.text} opacity-70 group-hover:opacity-100` : 'text-neutral-600 group-hover:text-blue-400')
+                            ? (colorMode ? colors.text : 'text-blue-500') 
+                            : (colorMode ? `${colors.text} opacity-70 group-hover:opacity-100` : 'text-text-dim group-hover:text-blue-500')
                           }
                         `} />
                         <span className="truncate">{name.replace('#', '')}</span>
                       </div>
                       
-                      {/* Count Badge */}
                       <span className={`text-[10px] ml-2 px-1.5 py-0.5 rounded-full flex-shrink-0
                         ${isActive 
-                          ? (colorMode ? 'bg-black/10' : 'bg-blue-500/20 text-blue-300') 
-                          : 'bg-white/5 text-neutral-500 group-hover:text-neutral-400'
+                          ? (colorMode ? 'bg-black/10' : 'bg-blue-500/20 text-blue-600 dark:text-blue-300') 
+                          : 'bg-black/5 dark:bg-white/5 text-text-dim group-hover:text-text-main'
                         }
                       `}>
                         {count}
@@ -247,29 +273,29 @@ export function OutlinerWrapper() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col h-full bg-[#191919] min-w-0">
+      <div className="flex-1 flex flex-col h-full bg-app-bg min-w-0">
         
         {/* Header */}
-        <header className="h-14 flex items-center px-6 border-b border-white/5 bg-[#191919]/80 backdrop-blur-md z-10 sticky top-0 flex-shrink-0">
+        <header className="h-14 flex items-center px-6 border-b border-border-subtle bg-app-bg/80 backdrop-blur-md z-10 sticky top-0 flex-shrink-0">
           <button 
             onClick={() => setShowSidebar(!showSidebar)}
-            className="p-1.5 rounded-md text-neutral-500 hover:bg-white/5 hover:text-neutral-300 transition-colors mr-4"
+            className="p-1.5 rounded-md text-text-dim hover:bg-item-hover hover:text-text-main transition-colors mr-4"
           >
             <SidebarIcon size={18} />
           </button>
-          <h1 className="text-sm font-medium text-neutral-400 flex items-center">
+          <h1 className="text-sm font-medium text-text-dim flex items-center">
             {activeTag ? (
               <>
-                <span className="text-neutral-600 mr-2">Tag:</span> 
+                <span className="text-text-dim/50 mr-2">Tag:</span> 
                 {(() => {
                   const colors = getTagColor(activeTag);
                   return (
-                    <span className={`px-2 py-0.5 rounded text-xs ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-400 bg-blue-500/10'}`}>
+                    <span className={`px-2 py-0.5 rounded text-xs ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}`}>
                       {activeTag}
                     </span>
                   );
                 })()}
-                <button onClick={() => setActiveTag(null)} className="ml-2 hover:bg-white/10 p-1 rounded-full"><X size={12}/></button>
+                <button onClick={() => setActiveTag(null)} className="ml-2 hover:bg-item-hover p-1 rounded-full"><X size={12}/></button>
               </>
             ) : "Untitled Outline"}
           </h1>
@@ -278,21 +304,21 @@ export function OutlinerWrapper() {
         {/* Editor Area */}
         <div className="flex-1 overflow-y-auto relative">
           {/* Shortcuts Watermark - Centered Bottom */}
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 pointer-events-none select-none z-0 hidden lg:block opacity-20 hover:opacity-100 transition-opacity duration-300 w-full max-w-4xl px-8">
-             <div className="text-[11px] font-mono text-neutral-500 flex flex-wrap justify-center gap-x-6 gap-y-2 uppercase tracking-tight">
-                <div className="flex items-center gap-1.5"><span className="font-bold text-neutral-400 bg-white/5 px-1 rounded">Enter</span> New Node</div>
-                <div className="flex items-center gap-1.5"><span className="font-bold text-neutral-400 bg-white/5 px-1 rounded">Tab</span> Indent</div>
-                <div className="flex items-center gap-1.5"><span className="font-bold text-neutral-400 bg-white/5 px-1 rounded">Alt + ↕</span> Move</div>
-                <div className="flex items-center gap-1.5"><span className="font-bold text-neutral-400 bg-white/5 px-1 rounded">Ctrl + .</span> Fold</div>
-                <div className="flex items-center gap-1.5"><span className="font-bold text-neutral-400 bg-white/5 px-1 rounded">Ctrl + Ent</span> Check</div>
-                <div className="flex items-center gap-1.5"><span className="font-bold text-neutral-400 bg-white/5 px-1 rounded">#tag</span> Tag</div>
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 pointer-events-none select-none z-0 hidden lg:block opacity-20 hover:opacity-80 transition-opacity duration-300 w-full max-w-4xl px-8">
+             <div className="text-[11px] font-mono text-text-dim flex flex-wrap justify-center gap-x-6 gap-y-2 uppercase tracking-tight">
+                <div className="flex items-center gap-1.5"><span className="font-bold text-text-dim bg-black/5 dark:bg-white/5 px-1 rounded">Enter</span> New Node</div>
+                <div className="flex items-center gap-1.5"><span className="font-bold text-text-dim bg-black/5 dark:bg-white/5 px-1 rounded">Tab</span> Indent</div>
+                <div className="flex items-center gap-1.5"><span className="font-bold text-text-dim bg-black/5 dark:bg-white/5 px-1 rounded">Alt + ↕</span> Move</div>
+                <div className="flex items-center gap-1.5"><span className="font-bold text-text-dim bg-black/5 dark:bg-white/5 px-1 rounded">Ctrl + .</span> Fold</div>
+                <div className="flex items-center gap-1.5"><span className="font-bold text-text-dim bg-black/5 dark:bg-white/5 px-1 rounded">Ctrl + Ent</span> Check</div>
+                <div className="flex items-center gap-1.5"><span className="font-bold text-text-dim bg-black/5 dark:bg-white/5 px-1 rounded">#tag</span> Tag</div>
              </div>
           </div>
 
           <div className="max-w-4xl mx-auto py-12 px-8 sm:px-12 pb-40 relative z-10">
              {isLoading ? (
                <div className="flex justify-center items-center h-40">
-                 <div className="w-6 h-6 border-2 border-white/20 border-t-blue-500 rounded-full animate-spin"></div>
+                 <div className="w-6 h-6 border-2 border-border-subtle border-t-blue-500 rounded-full animate-spin"></div>
                </div>
              ) : (
              <div className="flex flex-col relative">
@@ -323,8 +349,8 @@ export function OutlinerWrapper() {
                ))}
                
                {visibleNodes.length === 0 && (
-                 <div className="text-center py-20 text-neutral-600">
-                   {activeTag ? 'No notes found with this tag' : <>Press <span className="font-mono bg-white/5 px-1 rounded">Enter</span> to start writing</>}
+                 <div className="text-center py-20 text-text-dim/50">
+                   {activeTag ? 'No notes found with this tag' : <>Press <span className="font-mono bg-item-hover px-1 rounded">Enter</span> to start writing</>}
                  </div>
                )}
              </div>
