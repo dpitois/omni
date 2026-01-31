@@ -1,144 +1,111 @@
 import { useRef, useEffect } from 'preact/hooks';
-import { Sidebar as SidebarIcon, X, Palette, Sun, Moon, Search, Columns, Check, CloudOff } from 'lucide-preact';
-import { getTagColor } from '../utils/colors';
-import { useUIState, useUIActions, ALL_COLUMNS } from '../context/UIContext';
-import { useFilterState, useFilterActions } from '../context/FilterContext';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { Search, Hash, Palette, Columns, Sun, Moon, X, Settings } from 'lucide-preact';
+import { useOutlinerData, useOutlinerActions } from '../context/OutlinerContext';
+import { useUIState, useUIActions } from '../context/UIContext';
+import { outlinerStore } from '../services/store';
 
 export function Header() {
-  const { activeTag, searchQuery } = useFilterState();
-  const { setSearchQuery, setActiveTag } = useFilterActions();
-  const { darkMode, colorMode, showColumnMenu, visibleColumnIds, showSidebar } = useUIState();
-  const { setShowSidebar, setColorMode, setDarkMode, setShowColumnMenu, toggleColumnVisibility } = useUIActions();
-  const isOnline = useOnlineStatus();
-  
+  const { tags } = useOutlinerData();
+  const { setSearchQuery, toggleTag } = useOutlinerActions();
+  const { darkMode, colorMode, showColumnMenu, searchFocusTrigger } = useUIState();
+  const { setDarkMode, setColorMode, setShowColumnMenu } = useUIActions();
+
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
+    if (searchFocusTrigger > 0 && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchFocusTrigger]);
+
+  const searchQuery = outlinerStore.searchQuery.value;
+  const activeTags = outlinerStore.activeTags.value;
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    activeTags.forEach((t) => toggleTag(t));
+  };
 
   return (
-    <header className="h-14 flex items-center justify-between px-6 border-b border-border-subtle bg-app-bg/80 backdrop-blur-md z-30 sticky top-0 flex-shrink-0">
-      <div className="flex items-center flex-1">
-        <button 
-          onClick={() => setShowSidebar(!showSidebar)} 
-          className="p-1.5 rounded-md text-text-dim hover:bg-item-hover hover:text-text-main transition-colors mr-4 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          title="Toggle Sidebar (Alt+S)"
-        >
-          <SidebarIcon size={18} />
-        </button>
-        <div className="flex items-center gap-3">
-          <h1 className="text-sm font-medium text-text-dim flex items-center truncate gap-2">
-              {activeTag ? (
-                <>
-                  <span className="text-text-dim/50">Tag:</span> 
-                  <TagBadge tag={activeTag} colorMode={colorMode} onClear={() => setActiveTag(null)} />
-                </>
-              ) : (
-                  <span className="font-bold tracking-tight text-text-main/80">Omni</span>
-              )}
-          </h1>
-          {!isOnline && (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider border border-amber-500/20">
-              <CloudOff size={12} />
-              <span>Offline</span>
-            </div>
+    <header className="h-16 border-b border-border-subtle bg-app-bg/80 backdrop-blur-md flex items-center px-6 gap-4 sticky top-0 z-40">
+      <div className="flex-1 flex items-center gap-4">
+        <div className="relative group flex-1 max-w-md">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim group-focus-within:text-blue-500 transition-colors"
+          />
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search nodes..."
+            className="w-full bg-item-hover border border-transparent focus:border-blue-500/50 rounded-full py-2 pl-10 pr-4 text-sm outline-none transition-all"
+            value={searchQuery}
+            onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim hover:text-text-main"
+            >
+              <X size={14} />
+            </button>
           )}
         </div>
-      </div>
 
-      <div className="flex items-center gap-4">
-        <SearchBar value={searchQuery} onChange={setSearchQuery} inputRef={searchInputRef} />
-
-        <div className="flex items-center gap-1 border-l border-border-subtle pl-4">
-          <IconButton onClick={() => setColorMode(!colorMode)} active={colorMode} title="Toggle Colors (Alt+C)"><Palette size={14} /></IconButton>
-          <IconButton onClick={() => setDarkMode(!darkMode)} title="Toggle Theme (Alt+T)">{darkMode ? <Sun size={14} /> : <Moon size={14} />}</IconButton>
-          
-          <div className="relative ml-2">
-            <button 
-              onClick={() => setShowColumnMenu(!showColumnMenu)} 
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors border focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${showColumnMenu ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' : 'text-text-dim border-border-subtle hover:bg-item-hover hover:text-text-main'}`}
-              title="Toggle Columns (Alt+K)"
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+          {tags.slice(0, 8).map((tag) => (
+            <button
+              key={tag.name}
+              onClick={() => toggleTag(tag.name)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                activeTags.includes(tag.name)
+                  ? 'bg-blue-500 text-white shadow-sm'
+                  : 'bg-item-hover text-text-dim hover:text-text-main border border-transparent hover:border-border-subtle'
+              }`}
             >
-              <Columns size={14} />
-              <span>Columns</span>
+              <Hash size={10} />
+              <span>{tag.name.replace('#', '')}</span>
+              <span className="opacity-50 text-[10px]">{tag.count}</span>
             </button>
-            {showColumnMenu && (
-              <ColumnDropdown 
-                columns={ALL_COLUMNS} 
-                visibleIds={visibleColumnIds} 
-                onToggle={toggleColumnVisibility} 
-              />
-            )}
-          </div>
+          ))}
         </div>
       </div>
+
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => setColorMode(!colorMode)}
+          className={`p-2 rounded-lg transition-colors ${colorMode ? 'text-blue-500 bg-blue-500/10' : 'text-text-dim hover:bg-item-hover'}`}
+          title="Toggle Tag Colors (Alt+C)"
+        >
+          <Palette size={18} />
+        </button>
+
+        <button
+          onClick={() => setShowColumnMenu(!showColumnMenu)}
+          className={`p-2 rounded-lg transition-colors ${showColumnMenu ? 'text-blue-500 bg-blue-500/10' : 'text-text-dim hover:bg-item-hover'}`}
+          title="Columns Menu (Alt+K)"
+        >
+          <Columns size={18} />
+        </button>
+
+        <button
+          onClick={() => setDarkMode(!darkMode)}
+          className="p-2 rounded-lg text-text-dim hover:bg-item-hover transition-colors"
+          title="Toggle Theme (Alt+T)"
+        >
+          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
+        <div className="w-px h-4 bg-border-subtle mx-1" />
+
+        <button
+          onClick={clearFilters}
+          className={`p-2 rounded-lg transition-colors ${searchQuery || activeTags.length > 0 ? 'text-blue-500 hover:bg-blue-500/10' : 'text-text-dim opacity-20 pointer-events-none'}`}
+          title="Clear filters"
+        >
+          <Settings size={18} />
+        </button>
+      </div>
     </header>
-  );
-}
-
-function TagBadge({ tag, colorMode, onClear }: { tag: string, colorMode: boolean, onClear: () => void }) {
-  const colors = getTagColor(tag);
-  return (
-    <div className="flex items-center">
-      <span className={`px-2 py-0.5 rounded text-xs ${colorMode ? `${colors.bg} ${colors.text}` : 'text-blue-500 bg-blue-500/10'}`}>
-        {tag}
-      </span>
-      <button onClick={onClear} className="ml-2 hover:bg-item-hover p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20"><X size={12}/></button>
-    </div>
-  );
-}
-
-function SearchBar({ value, onChange, inputRef }: { value: string, onChange: (v: string) => void, inputRef: any }) {
-  return (
-    <div className="max-w-xs relative">
-      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim/50"><Search size={14} /></div>
-      <input 
-        ref={inputRef} 
-        type="text" 
-        value={value} 
-        onInput={(e) => onChange(e.currentTarget.value)} 
-        placeholder="Search... (Ctrl+F)" 
-        className="w-full bg-sidebar-bg/50 border border-border-subtle rounded-full py-1.5 pl-9 pr-4 text-sm text-text-main focus:outline-none focus:border-blue-500/50 focus:bg-sidebar-bg transition-all focus:ring-2 focus:ring-blue-500/20" 
-      />
-    </div>
-  );
-}
-
-function IconButton({ children, onClick, active, title }: any) {
-    return (
-        <button 
-            onClick={onClick} 
-            className={`p-1.5 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${active ? 'text-text-main bg-app-bg shadow-sm' : 'text-text-dim hover:text-text-main'}`}
-            title={title}
-        >
-            {children}
-        </button>
-    );
-}
-
-function ColumnDropdown({ columns, visibleIds, onToggle }: any) {
-  return (
-    <div className="absolute right-0 mt-2 w-48 bg-sidebar-bg border border-border-subtle rounded-lg shadow-xl py-2 z-50 backdrop-blur-md">
-      <div className="px-3 py-1 mb-1 text-[10px] font-bold text-text-dim uppercase tracking-wider">Display Columns</div>
-      {columns.slice(1).map((col: any) => (
-        <button 
-          key={col.id} 
-          onClick={() => onToggle(col.id)} 
-          className="w-full flex items-center justify-between px-3 py-2 text-sm text-text-main hover:bg-item-hover transition-colors focus:outline-none focus:bg-item-hover"
-        >
-          <span>{col.label}</span>
-          {visibleIds.includes(col.id) && <Check size={14} className="text-blue-500" />}
-        </button>
-      ))}
-    </div>
   );
 }

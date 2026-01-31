@@ -3,7 +3,7 @@ import { useState, useEffect } from 'preact/hooks';
 export function useTheme() {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('mvo_theme');
-    return saved ? saved === 'dark' : true; 
+    return saved ? saved === 'dark' : true;
   });
 
   useEffect(() => {

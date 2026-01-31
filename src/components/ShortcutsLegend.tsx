@@ -8,7 +8,7 @@ export function ShortcutsLegend() {
     { keys: 'Enter', label: 'New' },
     { keys: 'Tab', label: 'Indent' },
     { keys: 'Alt + ↕', label: 'Move' },
-    { keys: 'Alt + S', label: 'Sidebar' },
+    { keys: 'Alt + S', label: 'Sidebar' }
   ];
 
   return (
@@ -27,12 +27,14 @@ export function ShortcutsLegend() {
           ))}
         </div>
 
-        <button 
+        <button
           onClick={() => setShowShortcutsModal(true)}
           className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-all text-[10px] font-bold uppercase tracking-widest border border-blue-500/20"
         >
           <HelpCircle size={14} />
-          <span>All Shortcuts <span className="hidden sm:inline">(Alt+H)</span></span>
+          <span>
+            All Shortcuts <span className="hidden sm:inline">(Alt+H)</span>
+          </span>
         </button>
       </div>
     </footer>

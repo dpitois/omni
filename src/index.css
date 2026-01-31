@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --color-app-bg: var(--app-bg);
@@ -17,7 +17,7 @@
   --text-dim: #78716c;
   --border-subtle: rgba(0, 0, 0, 0.05);
   --item-hover: rgba(0, 0, 0, 0.03);
-  
+
   color-scheme: light;
 }
 
@@ -29,13 +29,22 @@
   --text-dim: #737373;
   --border-subtle: rgba(255, 255, 255, 0.05);
   --item-hover: rgba(255, 255, 255, 0.03);
-  
+
   color-scheme: dark;
 }
 
 @layer base {
   body {
     @apply bg-app-bg text-text-main antialiased transition-colors duration-200;
+  }
+  button,
+  [role='button'],
+  input[type='button'],
+  input[type='submit'] {
+    @apply cursor-pointer;
+  }
+  button:disabled {
+    @apply cursor-not-allowed;
   }
 }
 

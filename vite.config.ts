@@ -1,11 +1,13 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import preact from '@preact/preset-vite';
+import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     preact(),
+    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
@@ -23,20 +25,20 @@ export default defineConfig({
           {
             src: 'vite.svg',
             sizes: '192x192',
-            type: 'image/svg+xml',
+            type: 'image/svg+xml'
+          },
+          {
+            src: 'vite.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml'
           },
           {
             src: 'vite.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
-          },
-          {
-            src: 'vite.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any maskable',
-          },
-        ],
+            purpose: 'any maskable'
+          }
+        ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
@@ -48,15 +50,20 @@ export default defineConfig({
               cacheName: 'google-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
               },
               cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-        ],
-      },
-    }),
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
+      }
+    })
   ],
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts']
+  }
 });
