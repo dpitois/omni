@@ -1,84 +1,69 @@
-import { useState, useEffect } from 'preact/hooks';
-import { UploadCloud } from 'lucide-preact';
+import { useRef } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
 import { useOutlinerActions } from '../context/OutlinerContext';
+import { outlinerStore } from '../services/store';
 
-export function ImportExportZone({ children }: { children: any }) {
-  const [isDragging, setIsDragging] = useState(false);
-  const { importNodes } = useOutlinerActions();
+export function ImportExportZone({ children }: { children: ComponentChildren }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { takeSnapshot } = useOutlinerActions();
 
-  useEffect(() => {
-    const handleDragOver = (e: DragEvent) => {
-      e.preventDefault();
-      setIsDragging(true);
-    };
+  const handleImport = () => {
+    fileInputRef.current?.click();
+  };
 
-    const handleDragLeave = (e: DragEvent) => {
-      e.preventDefault();
-      if (e.relatedTarget === null) {
-        setIsDragging(false);
+  const onFileChange = async (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    try {
+      let nodes = [];
+      if (file.name.endsWith('.json')) {
+        nodes = JSON.parse(text);
+      } else if (file.name.endsWith('.opml') || file.name.endsWith('.xml')) {
+        const { parseOPML } = await import('../utils/export');
+        nodes = parseOPML(text);
       }
-    };
 
-    const handleDrop = async (e: DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-
-      const file = e.dataTransfer?.files[0];
-      if (file && file.name.endsWith('.json')) {
-        const text = await file.text();
-        try {
-          const importedNodes = JSON.parse(text);
-          if (Array.isArray(importedNodes)) {
-            if (confirm(`Import ${importedNodes.length} nodes? This will replace your current outline.`)) {
-              await importNodes(importedNodes);
-            }
-          }
-        } catch (err) {
-          alert("Invalid JSON file.");
+      if (Array.isArray(nodes) && nodes.length > 0) {
+        if (confirm(`Import ${nodes.length} nodes?`)) {
+          takeSnapshot();
+          await outlinerStore.clearAll();
+          outlinerStore.setNodes(nodes);
+          await outlinerStore.saveNodes(nodes);
         }
       }
-    };
-
-    window.addEventListener('dragover', handleDragOver);
-    window.addEventListener('dragleave', handleDragLeave);
-    window.addEventListener('drop', handleDrop);
-
-    return () => {
-      window.removeEventListener('dragover', handleDragOver);
-      window.removeEventListener('dragleave', handleDragLeave);
-      window.removeEventListener('drop', handleDrop);
-    };
-  }, [importNodes]);
+    } catch (err) {
+      alert('Failed to import file. Check console for details.');
+      console.error(err);
+    }
+  };
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full group">
       {children}
-      
-      {isDragging && (
-        <div className="absolute inset-0 z-[100] bg-blue-500/10 backdrop-blur-md border-4 border-dashed border-blue-500/50 flex flex-col items-center justify-center p-12 pointer-events-none">
-          <div className="bg-app-bg p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4">
-            <div className="w-20 h-20 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center">
-              <UploadCloud size={48} />
-            </div>
-            <div className="text-center">
-              <h3 className="text-xl font-bold text-text-main">Drop to Import</h3>
-              <p className="text-sm text-text-dim mt-1">Accepts Omni .json exports</p>
-            </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,.opml,.xml"
+        onChange={onFileChange}
+        className="hidden"
+      />
+
+      {/* Visual cue for drag & drop or click import if no nodes */}
+      {outlinerStore.nodes.value.length === 0 && !outlinerStore.isLoading.value && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="text-center p-8 border-2 border-dashed border-border-subtle rounded-3xl bg-app-bg/50 backdrop-blur-sm">
+            <p className="text-text-dim mb-4">Your outline is empty.</p>
+            <button
+              onClick={handleImport}
+              className="pointer-events-auto px-6 py-2 bg-blue-500 text-white rounded-full font-bold hover:bg-blue-600 transition-all shadow-lg"
+            >
+              Import Data
+            </button>
           </div>
         </div>
       )}
     </div>
   );
-}
-
-export function exportData(nodes: any[]) {
-  const data = JSON.stringify(nodes, null, 2);
-  const blob = new Blob([data], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const date = new Date().toISOString().split('T')[0];
-  a.href = url;
-  a.download = `omni-export-${date}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
 }

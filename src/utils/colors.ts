@@ -11,7 +11,7 @@ const PASTEL_PALETTE = [
   { text: 'text-indigo-400', bg: 'bg-indigo-400/10', border: 'border-indigo-400/20' },
   { text: 'text-violet-400', bg: 'bg-violet-400/10', border: 'border-violet-400/20' },
   { text: 'text-fuchsia-400', bg: 'bg-fuchsia-400/10', border: 'border-fuchsia-400/20' },
-  { text: 'text-pink-400', bg: 'bg-pink-400/10', border: 'border-pink-400/20' },
+  { text: 'text-pink-400', bg: 'bg-pink-400/10', border: 'border-pink-400/20' }
 ];
 
 export function getTagColor(tag: string) {
@@ -19,7 +19,7 @@ export function getTagColor(tag: string) {
   for (let i = 0; i < tag.length; i++) {
     hash = tag.charCodeAt(i) + ((hash << 5) - hash);
   }
-  
+
   const index = Math.abs(hash) % PASTEL_PALETTE.length;
   return PASTEL_PALETTE[index];
 }

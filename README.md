@@ -6,75 +6,74 @@ Omni is a high-performance, keyboard-centric hierarchical outliner built with a 
 
 ## ✨ Features
 
-- **Hierarchical Outlining:** Unlimited nesting with parent-child relationships.
-- **Keyboard First:** Optimized for speed with comprehensive keyboard shortcuts.
-- **Rich Text Support:** Nested Markdown styles (Bold, Italic, Underline, Strikethrough) via recursive parsing.
+- **Multi-Document (Workspaces):** Create and manage independent outlines with isolated data.
+- **Hierarchical Outlining:** Unlimited nesting with parent-child relationships and "Focus Mode" (Hoisting).
+- **VIM-Hybrid Navigation:** Modal system with Normal, Insert, and Command modes for power users.
+- **Command Palette (Ctrl+K):** Searchable "Spotlight" interface to quickly trigger any action or switch workspace.
+- **Persistent Filters:** Save complex search and tag combinations as named "Views" in the sidebar.
+- **Rich Text Support:** Nested Markdown styles via recursive parsing.
+- **Snapshot-based Undo/Redo:** Native history management with Vim (`u`) and standard (`Ctrl+Z`) shortcuts.
 - **Smart Checkboxes:** Hierarchical completion logic (cascade check/uncheck).
-- **Tag System:** Extraction, filtering, and tag management with counts.
-- **Custom Columns:** Dynamic visibility for Status, Date, and Progress slider.
-- **Global Search:** Instant search across all nodes with hierarchical context.
-- **Offline First (PWA):** Installable application that works 100% offline via IndexedDB.
-- **Data Portability:** JSON Backup/Restore and global Drag'n Drop import.
-- **Beautiful UI:** Light/Dark modes with "Modern Vintage" stone tones and high-contrast zebra-striping.
+- **Offline First (PWA):** Installable application that works 100% offline via IndexedDB (v3).
+- **Interoperability:** JSON Backup/Restore and standard OPML Import/Export.
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** [Preact](https://preactjs.com/) (Ultra-lightweight React alternative)
-- **Build Tool:** [Vite](https://vitejs.dev/)
+- **Frontend:** [Preact](https://preactjs.com/) + [@preact/signals](https://preactjs.com/guide/v10/signals/) (O(1) reactivity)
 - **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
-- **State Management:** React Context API (Domain-driven)
-- **Storage:** IndexedDB (Persistent, scalable client-side storage)
+- **State Management:** Hybrid (Context API for DI + Signals for high-frequency updates)
+- **Validation:** [Valibot](https://valibot.io/) for data integrity
+- **Storage:** IndexedDB (Atomic saves, multi-store for docs and filters)
 - **Icons:** [Lucide Preact](https://lucide.dev/)
-- **PWA:** `vite-plugin-pwa`
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut | Action |
-| :--- | :--- |
-| `Enter` | Create New Node |
-| `Tab` | Indent Node |
-| `Shift + Tab` | Outdent Node |
-| `Alt + ↑/↓` | Move Node Up/Down |
-| `Ctrl + .` | Toggle Fold/Collapse |
-| `Ctrl + Enter` | Toggle Checkbox |
-| `Alt + ←/→` | Navigate Columns |
-| `Ctrl + B` | Bold Text |
-| `Ctrl + I` | Italic Text |
-| `Ctrl + U` | Underline Text |
-| `Ctrl + Shift + S` | Strikethrough Text |
-| `Ctrl + F` | Focus Search |
+### Global & UI
+
+| Shortcut   | Action                    |
+| :--------- | :------------------------ |
+| `Alt + S`  | Toggle Sidebar            |
+| `Alt + L`  | Focus Library (Sidebar)   |
+| `Alt + T`  | Switch Theme (Light/Dark) |
+| `Alt + C`  | Toggle Tag Colors         |
+| `Alt + K`  | Columns Visibility Menu   |
+| `Alt + H`  | Show Help Modal           |
+| `Ctrl + K` | **Command Palette**       |
+| `Ctrl + F` | Focus Search Input        |
+
+### Normal Mode (Vim-style Navigation)
+
+| Shortcut           | Action                  |
+| :----------------- | :---------------------- |
+| `j` or `↓`         | Navigate Down           |
+| `k` or `↑`         | Navigate Up             |
+| `Shift + j/k`      | **Select Range**        |
+| `z`                | Toggle Focus (Hoist)    |
+| `h` or `←`         | Navigate Left / Outdent |
+| `l` or `→`         | Navigate Right / Indent |
+| `i` / `a`          | Enter Insert Mode       |
+| `u` / `Ctrl + R`   | **Undo / Redo**         |
+| `o`                | New Node + Insert Mode  |
+| `:`                | Enter Command Mode      |
+| `d` or `Backspace` | Delete Node(s)          |
+| `Space` or `Enter` | Toggle Checkbox         |
+| `.`                | Toggle Collapse/Fold    |
+
+### Structure & Editing
+
+| Shortcut            | Action                   |
+| :------------------ | :----------------------- |
+| `Alt + ↑/↓`         | Move Node Up/Down        |
+| `Alt + ←/→`         | Navigate Columns         |
+| `Tab` / `Shift+Tab` | Indent / Outdent         |
+| `Ctrl + B/I/U/S`    | **Rich Text Formatting** |
+| `Esc`               | Return to Normal Mode    |
 
 ## 🚀 Getting Started
 
-### Prerequisites
-
-- Node.js (v18 or higher)
-- npm or pnpm
-
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/omni.git
-   cd omni
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-### Building for Production
-
-To create a production-ready bundle with Service Worker generation:
-
 ```bash
-npm run build
+npm install
+npm run dev
 ```
 
 ## 📄 License

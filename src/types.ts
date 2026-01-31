@@ -1,11 +1,15 @@
+export type UIMode = 'normal' | 'insert' | 'command';
+
 export type ColumnType = 'text' | 'progress' | 'date';
 
 export interface Column {
   id: string;
   label: string;
   type: ColumnType;
-  width: string; // e.g., '1fr' or '120px'
+  width: string;
 }
+
+export type MetadataValue = string | number | boolean | null;
 
 export interface Node {
   id: string;
@@ -13,8 +17,22 @@ export interface Node {
   level: number;
   rank: number;
   checked: boolean;
-  collapsed?: boolean;
+  collapsed: boolean;
   parentId: string | null;
   updatedAt: number;
-  metadata?: Record<string, any>; // For custom column data
+  docId: string;
+  metadata: Record<string, MetadataValue>;
+}
+
+export interface TagInfo {
+  name: string;
+  count: number;
+}
+
+export interface SavedFilter {
+  id: string;
+  label: string;
+  query: string;
+  tags: string[];
+  docId: string;
 }
